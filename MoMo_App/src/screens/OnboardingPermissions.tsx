@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Button, Card } from '@react-native-blossom-ui/components';
+import { View, StyleSheet } from 'react-native';
+import { Button, Card, Text } from '@react-native-blossom-ui/components';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -32,17 +32,18 @@ export default function OnboardingPermissions({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <Card style={styles.card}>
-        <Text style={styles.title}>Permissions</Text>
-        <Text style={styles.subtitle}>
+        <Text typography="h2" style={styles.title}>Permissions</Text>
+        <Text typography="b1" style={styles.subtitle}>
           We'll need a few permissions to get started (SMS, Notifications, etc.).
         </Text>
         <Button
+          title="Allow Permissions"
           isLoading={loading}
+          mode="filled"
+          size="large"
           onPress={handleAllowPermissions}
           style={{ marginTop: 16 }}
-        >
-          Allow Permissions
-        </Button>
+        />
       </Card>
     </View>
   );

@@ -1,8 +1,9 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Button, Text } from '@react-native-blossom-ui/components';
 import { AnimatedCard, AnimatedText, AuroraText, RainbowButton, ShimmerButton } from '../components/ui';
 type OnboardingStackParamList = {
   OnboardingWelcome: undefined;
@@ -31,43 +32,31 @@ export default function OnboardingWelcome({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <AnimatedCard
-        title=""
-        content=""
-        gradient="blue-purple"
-        onPress={() => {}}
-      >
-        <View style={styles.cardContent}>
-          <AnimatedText
-            animation="slideUp"
-            delay={200}
-            style={styles.title}
-          >
-            Welcome!
-          </AnimatedText>
+      <View style={styles.card}>
+        <Text typography="h1" style={styles.title}>
+          Welcome!
+        </Text>
 
-          <AuroraText size="lg" style={styles.subtitle}>
-            Let's get you set up for success with MoMo Merchant App.
-          </AuroraText>
+        <Text typography="b1" style={styles.subtitle}>
+          Let's get you set up for success with MoMo Merchant App.
+        </Text>
 
-          <View style={styles.buttonContainer}>
-            <RainbowButton
-              size="lg"
-              onPress={() => navigation.navigate('OnboardingPermissions')}
-            >
-              Get Started
-            </RainbowButton>
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Get Started"
+            mode="filled"
+            size="large"
+            onPress={() => navigation.navigate('OnboardingPermissions')}
+          />
 
-            <ShimmerButton
-              size="md"
-              variant="secondary"
-              onPress={() => navigation.replace('MainApp')}
-            >
-              Skip
-            </ShimmerButton>
-          </View>
+          <Button
+            title="Skip"
+            mode="outlined"
+            size="medium"
+            onPress={() => navigation.replace('MainApp')}
+          />
         </View>
-      </AnimatedCard>
+      </View>
     </View>
   );
 }

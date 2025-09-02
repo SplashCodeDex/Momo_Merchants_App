@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Button, Card } from '@react-native-blossom-ui/components';
+import { View, StyleSheet } from 'react-native';
+import { Button, Card, Text } from '@react-native-blossom-ui/components';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,29 +17,6 @@ type Props = {
   route: RouteProp<OnboardingStackParamList, 'OnboardingSetup'>;
 };
 
-
-export default function OnboardingSetup({ navigation }: Props) {
-  const handleGoToHome = async () => {
-    await AsyncStorage.setItem('onboardingComplete', 'true');
-    navigation.replace('MainApp');
-  };
-
-  return (
-    <View style={styles.container}>
-      <Card style={styles.card}>
-        <Text style={styles.title}>Setup Complete</Text>
-        <Text style={styles.subtitle}>
-          You're ready to start using the MoMo Merchant App!
-        </Text>
-        <Button
-          onPress={handleGoToHome}
-          style={{ marginTop: 16 }}
-        >
-          Go to Home
-        </Button>
-      </Card>
-    </View>
-  );
 
 const styles = StyleSheet.create({
   container: {
@@ -75,18 +52,29 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 22,
   },
-  button: {
-    width: '100%',
-    paddingVertical: 16,
-    backgroundColor: '#3b82f6',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
 });
+
+export default function OnboardingSetup({ navigation }: Props) {
+  const handleGoToHome = async () => {
+    await AsyncStorage.setItem('onboardingComplete', 'true');
+    navigation.replace('MainApp');
+  };
+
+  return (
+    <View style={styles.container}>
+      <Card style={styles.card}>
+        <Text typography="h2" style={styles.title}>Setup Complete</Text>
+        <Text typography="b1" style={styles.subtitle}>
+          You're ready to start using the MoMo Merchant App!
+        </Text>
+        <Button
+          title="Go to Home"
+          mode="filled"
+          size="large"
+          onPress={handleGoToHome}
+          style={{ marginTop: 16 }}
+        />
+      </Card>
+    </View>
+  );
 }
