@@ -1,3 +1,5 @@
+import configManager from '../utils/config';
+
 // API Service Layer for Aggregator Integrations
 // This provides a unified interface for different financial data aggregators
 
@@ -41,34 +43,77 @@ class ApiService {
   private configs: Map<string, AggregatorConfig> = new Map();
 
   constructor() {
-    // Initialize with mock configurations
-    this.initializeMockConfigs();
+    // Initialize configurations based on environment
+    this.initializeConfigs();
+  }
+
+  private initializeConfigs() {
+    try {
+      // Try to use production configuration first
+      if (configManager.isReady()) {
+        const appConfig = configManager.getConfig();
+
+        // Pngme Configuration
+        this.configs.set('pngme', {
+          name: 'Pngme',
+          baseUrl: appConfig.apis.pngme.baseUrl,
+          apiKey: appConfig.apis.pngme.apiKey,
+          timeout: appConfig.apis.pngme.timeout,
+        });
+
+        // Okra Configuration
+        this.configs.set('okra', {
+          name: 'Okra',
+          baseUrl: appConfig.apis.okra.baseUrl,
+          apiKey: appConfig.apis.okra.apiKey,
+          timeout: appConfig.apis.okra.timeout,
+        });
+
+        // Mono Configuration
+        this.configs.set('mono', {
+          name: 'Mono',
+          baseUrl: appConfig.apis.mono.baseUrl,
+          apiKey: appConfig.apis.mono.apiKey,
+          timeout: appConfig.apis.mono.timeout,
+        });
+
+        console.log('✅ API Service initialized with production configuration');
+      } else {
+        // Fallback to mock configuration for development
+        console.warn('⚠️  ConfigManager not ready, using mock configuration');
+        this.initializeMockConfigs();
+      }
+    } catch (error) {
+      console.error('❌ Failed to initialize API configurations:', error);
+      // Fallback to mock configuration
+      this.initializeMockConfigs();
+    }
   }
 
   private initializeMockConfigs() {
-    // Pngme Configuration
+    // Mock Configuration for Development
     this.configs.set('pngme', {
-      name: 'Pngme',
+      name: 'Pngme (Mock)',
       baseUrl: 'https://api.pngme.com/v1',
-      apiKey: process.env.PNGME_API_KEY || 'mock_pngme_key',
+      apiKey: 'mock_pngme_key',
       timeout: 30000,
     });
 
-    // Okra Configuration
     this.configs.set('okra', {
-      name: 'Okra',
+      name: 'Okra (Mock)',
       baseUrl: 'https://api.okra.ng/v2',
-      apiKey: process.env.OKRA_API_KEY || 'mock_okra_key',
+      apiKey: 'mock_okra_key',
       timeout: 30000,
     });
 
-    // Mono Configuration
     this.configs.set('mono', {
-      name: 'Mono',
+      name: 'Mono (Mock)',
       baseUrl: 'https://api.withmono.com/v1',
-      apiKey: process.env.MONO_API_KEY || 'mock_mono_key',
+      apiKey: 'mock_mono_key',
       timeout: 30000,
     });
+
+    console.log('🔧 API Service initialized with mock configuration');
   }
 
   private async makeRequest<T>(
@@ -98,20 +143,67 @@ class ApiService {
 
       console.log(`[${aggregator}] Making request to: ${url}`);
 
-      // For development, return mock data instead of making real API calls
-      const mockResponse = await this.getMockResponse<T>(aggregator, endpoint, options);
+      // Determine if we should use mock data or real API calls
+      const useMockData = this.shouldUseMockData(aggregator);
 
-      const processingTime = Date.now() - startTime;
+      let response: Response;
+      if (useMockData) {
+        // Return mock data for development/testing
+        const mockResponse = await this.getMockResponse<T>(aggregator, endpoint, options);
+        return {
+          success: true,
+          data: mockResponse,
+          metadata: {
+            requestId,
+            timestamp: new Date().toISOString(),
+            processingTime: Date.now() - startTime,
+          },
+        };
+      } else {
+        // Make real API call
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), config.timeout);
 
-      return {
-        success: true,
-        data: mockResponse,
-        metadata: {
-          requestId,
-          timestamp: new Date().toISOString(),
-          processingTime,
-        },
-      };
+        try {
+          response = await fetch(url, {
+            ...options,
+            headers,
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+            throw new Error(`Request timeout after ${config.timeout}ms`);
+          }
+          throw fetchError;
+        }
+
+        // Handle HTTP response
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Unknown error');
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        // Parse response
+        const responseData = await response.json().catch(() => null);
+        if (!responseData) {
+          throw new Error('Invalid JSON response from API');
+        }
+
+        return {
+          success: true,
+          data: responseData,
+          metadata: {
+            requestId,
+            timestamp: new Date().toISOString(),
+            processingTime: Date.now() - startTime,
+          },
+        };
+      }
+
+      // This should never be reached due to early returns above
+      throw new Error('Unexpected code path in makeRequest');
     } catch (error) {
       console.error(`[${aggregator}] Request failed:`, error);
 
@@ -124,6 +216,26 @@ class ApiService {
           processingTime: Date.now() - startTime,
         },
       };
+    }
+  }
+
+  private shouldUseMockData(aggregator: string): boolean {
+    // Use mock data if:
+    // 1. ConfigManager is not ready (development)
+    // 2. Explicitly enabled in config
+    // 3. API key is still mock
+    try {
+      if (!configManager.isReady()) return true;
+
+      const appConfig = configManager.getConfig();
+      if (appConfig.development.enableMockData) return true;
+
+      const apiConfig = configManager.getApiConfig(aggregator as 'pngme' | 'okra' | 'mono');
+      if (apiConfig.apiKey.startsWith('mock_')) return true;
+
+      return false;
+    } catch {
+      return true; // Default to mock data on error
     }
   }
 
