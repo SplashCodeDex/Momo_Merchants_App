@@ -1,20 +1,12 @@
-import { View, Text, Button, StyleSheet } from 'react-native';
 import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 
-export default function MagicSample() {
+export default function HomeScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>
-        Magic UI Sample Component
-      </Text>
-      <Button
-        title="Try Me"
-        color="#3B82F6"
-        onPress={() => {}}
-      />
+      <Text style={styles.title}>Welcome to MoMo Merchant App</Text>
+      <Text style={styles.subtitle}>Your gateway to seamless mobile money operations.</Text>
     </View>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -29,4 +21,10 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     marginBottom: 16,
   },
+  subtitle: {
+    fontSize: 16,
+    color: '#374151',
+  },
 });
+  );
+}
