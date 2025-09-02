@@ -4,7 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import OnboardingWelcome from './screens/OnboardingWelcome';
 import OnboardingPermissions from './screens/OnboardingPermissions';
 import OnboardingSetup from './screens/OnboardingSetup';
-import App from '../App';
+import MainApp from './screens/MainApp';
 
 const Stack = createStackNavigator();
 
@@ -15,7 +15,7 @@ export default function AppNavigator() {
         <Stack.Screen name="OnboardingWelcome" component={OnboardingWelcome} />
         <Stack.Screen name="OnboardingPermissions" component={OnboardingPermissions} />
         <Stack.Screen name="OnboardingSetup" component={OnboardingSetup} />
-        <Stack.Screen name="MainApp" component={App} />
+        <Stack.Screen name="MainApp" component={MainApp} />
       </Stack.Navigator>
     </NavigationContainer>
   );

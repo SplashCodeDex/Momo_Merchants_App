@@ -1,12 +1,9 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Button, Card } from '@react-native-blossom-ui/components';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
-import { useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { MagicCard } from '@/components/ui/magic-card';
-import { TextAnimate } from '@/components/ui/text-animate';
-import { AuroraText } from '@/components/ui/aurora-text';
-import { RainbowButton } from '@/components/ui/rainbow-button';
 
 type OnboardingStackParamList = {
   OnboardingWelcome: undefined;
@@ -33,22 +30,72 @@ export default function OnboardingPermissions({ navigation }: Props) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white dark:bg-black">
-      <MagicCard className="w-full max-w-md p-8 flex flex-col items-center gap-8 shadow-xl">
-        <TextAnimate animation="blurInUp" by="character" as="h1" className="text-2xl font-bold text-center text-blue-600 mb-2">
-          Permissions
-        </TextAnimate>
-        <AuroraText className="text-lg font-medium text-center mb-4">
-          We’ll need a few permissions to get started (SMS, Notifications, etc.).
-        </AuroraText>
-        <RainbowButton
-          className="w-full py-3 text-lg font-semibold mt-2"
-          onClick={handleAllowPermissions}
-          disabled={loading}
+    <View style={styles.container}>
+      <Card style={styles.card}>
+        <Text style={styles.title}>Permissions</Text>
+        <Text style={styles.subtitle}>
+          We'll need a few permissions to get started (SMS, Notifications, etc.).
+        </Text>
+        <Button
+          isLoading={loading}
+          onPress={handleAllowPermissions}
+          style={{ marginTop: 16 }}
         >
-          {loading ? 'Requesting...' : 'Allow Permissions'}
-        </RainbowButton>
-      </MagicCard>
-    </div>
+          Allow Permissions
+        </Button>
+      </Card>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    padding: 20,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 400,
+    padding: 32,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#2563eb',
+    marginBottom: 16,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#374151',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  button: {
+    width: '100%',
+    paddingVertical: 16,
+    backgroundColor: '#3b82f6',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: '#9ca3af',
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
