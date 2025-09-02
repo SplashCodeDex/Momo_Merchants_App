@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Button, Text } from '@react-native-blossom-ui/components';
+import { Button, Text, Card } from '@react-native-blossom-ui/components';
 import { AnimatedCard, AnimatedText, AuroraText, RainbowButton, ShimmerButton } from '../components/ui';
 type OnboardingStackParamList = {
   OnboardingWelcome: undefined;
@@ -32,7 +32,7 @@ export default function OnboardingWelcome({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <Text typography="h1" style={styles.title}>
           Welcome!
         </Text>
@@ -56,7 +56,7 @@ export default function OnboardingWelcome({ navigation }: Props) {
             onPress={() => navigation.replace('MainApp')}
           />
         </View>
-      </View>
+      </Card>
     </View>
   );
 }
@@ -66,25 +66,24 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8fafc',
     padding: 20,
   },
-  cardContent: {
-    alignItems: 'center',
-    paddingVertical: 20,
+  card: {
+    width: '100%',
+    maxWidth: 400,
+    padding: 32,
   },
   title: {
-    fontSize: 30,
-    fontWeight: 'bold',
     textAlign: 'center',
-    color: '#ffffff',
     marginBottom: 16,
+    color: '#1f2937',
   },
   subtitle: {
-    fontSize: 18,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 24,
+    color: '#6b7280',
   },
   buttonContainer: {
     width: '100%',
