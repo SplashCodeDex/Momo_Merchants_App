@@ -19,7 +19,20 @@
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "deps:check": "./scripts/package-management.sh check",
+    "deps:clean": "./scripts/package-management.sh clean",
+    "deps:install": "./scripts/package-management.sh install",
+    "deps:info": "./scripts/package-management.sh info",
+    "deps:versions": "./scripts/package-management.sh versions",
+    "deps:update": "./scripts/package-management.sh update",
+    "deps:audit": "npm audit --audit-level moderate",
+    "deps:audit:fix": "npm audit fix",
+    "workspace:build": "turbo run build --parallel",
+    "workspace:test": "turbo run test --parallel",
+    "workspace:lint": "turbo run lint --parallel",
+    "workspace:clean": "turbo run clean --parallel",
+    "release": "changeset publish"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.6.5",
