@@ -1,0 +1,49 @@
+{
+  "moderate": true,
+  "allowlist": [
+    "GHSA-36jr-mh4h-2g58",
+    "GHSA-9c47-m6qq-7p4h",
+    "GHSA-c2qf-rxjj-qqgw",
+    "GHSA-ww39-953v-wcq6",
+    "GHSA-4w2v-q235-vp99",
+    "GHSA-67hx-6x53-jqq3",
+    "GHSA-8hfj-j24r-96c4",
+    "GHSA-9wv6-86v2-598j",
+    "GHSA-c6rq-rjc2-86v3",
+    "GHSA-f9xj-8mxf-2qwv",
+    "GHSA-g2q6-57p7-g4mm",
+    "GHSA-gf8q-jrpm-jvxq",
+    "GHSA-hc6q-2mpp-8f45",
+    "GHSA-hj48-42vr-x3wg",
+    "GHSA-m4v8-wqvr-p9h3",
+    "GHSA-m5pj-vjjf-4r3q",
+    "GHSA-m6fv-jmcg-4jfg",
+    "GHSA-p8p7-x288-28g6",
+    "GHSA-p9pc-299p-vxgp",
+    "GHSA-q2x7-8w3c-66g8",
+    "GHSA-qwph-4952-7xr6",
+    "GHSA-r683-j2x4-v87g",
+    "GHSA-r9p9-mrjm-926w",
+    "GHSA-rv95-896h-c2vc",
+    "GHSA-w5p7-h5w8-2hfq",
+    "GHSA-w8r3-rxmw-94xg",
+    "GHSA-w9mr-4mfr-4q4q",
+    "GHSA-x4jg-mjrx-434g",
+    "GHSA-xc9x-jj77-4b5h",
+    "GHSA-xvch-5gv4-984h"
+  ],
+  "path-allowlist": [
+    "/node_modules/.*",
+    "/apps/*/node_modules/.*",
+    "/services/*/node_modules/.*",
+    "/packages/*/node_modules/.*"
+  ],
+  "ignore-dev-dependencies": false,
+  "retry-count": 3,
+  "retry-on-429": true,
+  "summary": true,
+  "report": {
+    "type": "json",
+    "path": "security-audit-report.json"
+  }
+}

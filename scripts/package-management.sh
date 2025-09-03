@@ -1,12 +1,13 @@
 #!/bin/bash
 
-# MoMo Merchant Companion App - Package Management Scripts
-# This script provides utilities for managing packages in the monorepo
+# MoMo Merchant Companion App - Package Management Script
+# Comprehensive package management for the monorepo
 
 set -e
 
 # Configuration
-PROJECT_NAME="momo-merchant-app"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Colors for output
 RED='\033[0;31m'
@@ -44,341 +45,303 @@ print_info() {
     echo -e "${PURPLE}[INFO]${NC} $1"
 }
 
-# Function to check if we're in the project directory
-check_project_directory() {
-    if [ ! -f "package.json" ]; then
-        print_error "package.json not found. Please run this script from the project root directory."
+# Function to check if we're in the project root
+check_project_root() {
+    if [ ! -f "package.json" ] || [ ! -d "apps" ] || [ ! -d "services" ]; then
+        print_error "Please run this script from the project root directory"
         exit 1
     fi
-
-    if [ ! -d "apps" ] || [ ! -d "services" ] || [ ! -d "packages" ]; then
-        print_error "Monorepo structure not found. Expected apps/, services/, packages/ directories."
-        exit 1
-    fi
-}
-
-# Function to get workspace information
-get_workspace_info() {
-    print_header "Workspace Information"
-
-    echo "Root package.json workspaces:"
-    if [ -f "package.json" ]; then
-        jq -r '.workspaces[]' package.json 2>/dev/null || echo "  Unable to parse workspaces"
-    fi
-
-    echo ""
-    echo "Available workspaces:"
-
-    # List apps
-    if [ -d "apps" ]; then
-        echo "Apps:"
-        for app in apps/*; do
-            if [ -d "$app" ] && [ -f "$app/package.json" ]; then
-                name=$(jq -r '.name' "$app/package.json" 2>/dev/null || basename "$app")
-                version=$(jq -r '.version' "$app/package.json" 2>/dev/null || "unknown")
-                echo "  - $name ($version) - $app"
-            fi
-        done
-    fi
-
-    # List services
-    if [ -d "services" ]; then
-        echo "Services:"
-        for service in services/*; do
-            if [ -d "$service" ] && [ -f "$service/package.json" ]; then
-                name=$(jq -r '.name' "$service/package.json" 2>/dev/null || basename "$service")
-                version=$(jq -r '.version' "$service/package.json" 2>/dev/null || "unknown")
-                echo "  - $name ($version) - $service"
-            fi
-        done
-    fi
-
-    # List packages
-    if [ -d "packages" ]; then
-        echo "Packages:"
-        for pkg in packages/*; do
-            if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then
-                name=$(jq -r '.name' "$pkg/package.json" 2>/dev/null || basename "$pkg")
-                version=$(jq -r '.version' "$pkg/package.json" 2>/dev/null || "unknown")
-                echo "  - $name ($version) - $pkg"
-            fi
-        done
-    fi
-}
-
-# Function to check for dependency issues
-check_dependencies() {
-    print_header "Dependency Analysis"
-
-    print_step "Checking for duplicate dependencies..."
-    if command -v npx >/dev/null 2>&1; then
-        npx @microsoft/dependency-cruiser --validate --config .dependency-cruiser.js 2>/dev/null || print_warning "Dependency cruiser config not found or failed"
-    else
-        print_warning "npx not available for dependency analysis"
-    fi
-
-    print_step "Checking for outdated packages..."
-    if [ -f "package.json" ]; then
-        npm outdated 2>/dev/null || print_info "No outdated packages or npm outdated failed"
-    fi
-
-    print_step "Checking for security vulnerabilities..."
-    if command -v npm >/dev/null 2>&1; then
-        npm audit --audit-level moderate 2>/dev/null || print_warning "npm audit failed or found issues"
-    fi
-}
-
-# Function to clean workspaces
-clean_workspaces() {
-    print_header "Cleaning Workspaces"
-
-    print_step "Removing node_modules from all workspaces..."
-
-    # Clean root node_modules
-    if [ -d "node_modules" ]; then
-        print_info "Removing root node_modules..."
-        rm -rf node_modules
-    fi
-
-    # Clean workspace node_modules
-    for workspace in apps/* services/* packages/*; do
-        if [ -d "$workspace" ]; then
-            if [ -d "$workspace/node_modules" ]; then
-                print_info "Removing $workspace/node_modules..."
-                rm -rf "$workspace/node_modules"
-            fi
-        fi
-    done
-
-    print_step "Clearing npm cache..."
-    if command -v npm >/dev/null 2>&1; then
-        npm cache clean --force >/dev/null 2>&1 || print_warning "npm cache clean failed"
-    fi
-
-    print_step "Clearing yarn cache..."
-    if command -v yarn >/dev/null 2>&1; then
-        yarn cache clean >/dev/null 2>&1 || print_warning "yarn cache clean failed"
-    fi
-
-    print_success "Workspace cleanup completed"
 }
 
 # Function to install dependencies
 install_dependencies() {
-    print_header "Installing Dependencies"
+    print_step "Installing project dependencies..."
 
-    print_step "Installing root dependencies..."
-    if [ -f "package.json" ]; then
-        npm install
-        print_success "Root dependencies installed"
-    else
-        print_error "package.json not found in root directory"
-        exit 1
-    fi
+    # Install root dependencies
+    npm install
 
-    print_step "Installing workspace dependencies..."
-    if command -v npx >/dev/null 2>&1; then
-        npx turbo run install --parallel
-        print_success "Workspace dependencies installed"
-    else
-        print_warning "npx not available, installing workspaces manually..."
-        for workspace in apps/* services/* packages/*; do
-            if [ -d "$workspace" ] && [ -f "$workspace/package.json" ]; then
-                print_info "Installing dependencies for $workspace..."
-                (cd "$workspace" && npm install)
-            fi
-        done
-    fi
+    # Install workspace dependencies
+    npm run install:all
+
+    print_success "Dependencies installed successfully"
 }
 
-# Function to build workspaces
-build_workspaces() {
-    print_header "Building Workspaces"
+# Function to run security audit
+run_security_audit() {
+    print_step "Running security audit..."
 
-    print_step "Building all workspaces with Turborepo..."
-    if command -v npx >/dev/null 2>&1; then
-        npx turbo run build
-        print_success "All workspaces built successfully"
+    # Run npm audit
+    if npm audit --audit-level=moderate; then
+        print_success "Security audit passed"
     else
-        print_warning "npx not available, building workspaces manually..."
-        for workspace in packages/* services/* apps/*; do
-            if [ -d "$workspace" ] && [ -f "$workspace/package.json" ]; then
-                if jq -e '.scripts.build' "$workspace/package.json" >/dev/null 2>&1; then
-                    print_info "Building $workspace..."
-                    (cd "$workspace" && npm run build)
-                fi
-            fi
-        done
-    fi
-}
-
-# Function to run tests
-run_tests() {
-    print_header "Running Tests"
-
-    print_step "Running tests across all workspaces..."
-    if command -v npx >/dev/null 2>&1; then
-        npx turbo run test
-        print_success "All tests completed"
-    else
-        print_warning "npx not available, running tests manually..."
-        for workspace in packages/* services/* apps/*; do
-            if [ -d "$workspace" ] && [ -f "$workspace/package.json" ]; then
-                if jq -e '.scripts.test' "$workspace/package.json" >/dev/null 2>&1; then
-                    print_info "Running tests for $workspace..."
-                    (cd "$workspace" && npm test)
-                fi
-            fi
-        done
-    fi
-}
-
-# Function to lint code
-lint_code() {
-    print_header "Linting Code"
-
-    print_step "Running ESLint across all workspaces..."
-    if command -v npx >/dev/null 2>&1; then
-        npx turbo run lint
-        print_success "Linting completed"
-    else
-        print_warning "npx not available, linting manually..."
-        for workspace in packages/* services/* apps/*; do
-            if [ -d "$workspace" ] && [ -f "$workspace/package.json" ]; then
-                if jq -e '.scripts.lint' "$workspace/package.json" >/dev/null 2>&1; then
-                    print_info "Linting $workspace..."
-                    (cd "$workspace" && npm run lint)
-                fi
-            fi
-        done
-    fi
-}
-
-# Function to check package versions
-check_versions() {
-    print_header "Package Version Analysis"
-
-    print_step "Checking for version mismatches..."
-
-    # Create a temporary file to store package info
-    temp_file=$(mktemp)
-
-    # Collect all package names and versions
-    for workspace in packages/* services/* apps/*; do
-        if [ -d "$workspace" ] && [ -f "$workspace/package.json" ]; then
-            name=$(jq -r '.name' "$workspace/package.json" 2>/dev/null)
-            version=$(jq -r '.version' "$workspace/package.json" 2>/dev/null)
-            if [ "$name" != "null" ] && [ "$version" != "null" ]; then
-                echo "$name:$version:$workspace" >> "$temp_file"
-            fi
-        fi
-    done
-
-    # Check for duplicates
-    duplicates=$(cut -d: -f1 "$temp_file" | sort | uniq -d)
-    if [ -n "$duplicates" ]; then
-        print_warning "Duplicate package names found:"
-        echo "$duplicates"
-    else
-        print_success "No duplicate package names found"
+        print_warning "Security vulnerabilities found"
+        echo "Run 'npm audit fix' to attempt automatic fixes"
+        echo "Review vulnerabilities manually for critical issues"
     fi
 
-    # Clean up
-    rm -f "$temp_file"
+    # Run additional security checks if available
+    if command -v audit-ci >/dev/null 2>&1; then
+        print_step "Running audit-ci for comprehensive security check..."
+        npx audit-ci --config audit-ci.json
+    fi
 }
 
 # Function to update dependencies
 update_dependencies() {
-    print_header "Updating Dependencies"
+    local update_type="${1:-patch}"
 
-    print_step "Checking for outdated dependencies..."
-    if [ -f "package.json" ]; then
-        npm outdated
+    print_step "Updating $update_type dependencies..."
+
+    case $update_type in
+        "patch")
+            npm update --workspaces
+            ;;
+        "minor")
+            npx npm-check-updates -u --target minor
+            ;;
+        "major")
+            npx npm-check-updates -u --target latest
+            ;;
+        *)
+            print_error "Invalid update type. Use: patch, minor, or major"
+            exit 1
+            ;;
+    esac
+
+    print_success "Dependencies updated to $update_type versions"
+    print_info "Run 'npm install' to install updated packages"
+}
+
+# Function to check for outdated packages
+check_outdated() {
+    print_step "Checking for outdated packages..."
+
+    echo "Root packages:"
+    npm outdated
+
+    echo -e "\nWorkspace packages:"
+    npm run outdated:all 2>/dev/null || echo "No outdated:all script found"
+
+    print_info "Use './scripts/package-management.sh update [type]' to update packages"
+}
+
+# Function to clean node_modules and caches
+clean_cache() {
+    print_step "Cleaning caches and node_modules..."
+
+    # Remove node_modules
+    rm -rf node_modules
+    find . -name "node_modules" -type d -exec rm -rf {} + 2>/dev/null || true
+
+    # Clean npm cache
+    npm cache clean --force
+
+    # Clean workspaces
+    npm run clean:all 2>/dev/null || echo "No clean:all script found"
+
+    print_success "Cache and node_modules cleaned"
+    print_info "Run 'npm install' to reinstall dependencies"
+}
+
+# Function to analyze bundle sizes
+analyze_bundle() {
+    print_step "Analyzing bundle sizes..."
+
+    if [ -d "apps/mobile" ]; then
+        print_info "Analyzing mobile app bundle..."
+        cd apps/mobile
+        npx react-native-bundle-analyzer 2>/dev/null || echo "Bundle analyzer not available"
+        cd "$PROJECT_ROOT"
     fi
 
-    print_step "Updating dependencies interactively..."
-    if command -v npx >/dev/null 2>&1; then
-        npx npm-check-updates -u
-        print_info "Dependencies updated. Run 'npm install' to install new versions."
+    # Check if webpack-bundle-analyzer is available
+    if [ -f "package.json" ] && grep -q "webpack-bundle-analyzer" package.json; then
+        print_info "Running webpack bundle analysis..."
+        npm run analyze:bundle 2>/dev/null || echo "No analyze:bundle script found"
+    fi
+
+    print_success "Bundle analysis completed"
+}
+
+# Function to check license compliance
+check_licenses() {
+    print_step "Checking license compliance..."
+
+    if command -v license-checker >/dev/null 2>&1; then
+        npx license-checker --production --csv > license-report.csv
+        print_success "License report generated: license-report.csv"
     else
-        print_warning "npx not available for dependency updates"
+        print_warning "license-checker not installed"
+        print_info "Install with: npm install -g license-checker"
     fi
 }
 
-# Function to show help
-show_help() {
+# Function to validate workspace configuration
+validate_workspaces() {
+    print_step "Validating workspace configuration..."
+
+    # Check package.json workspaces
+    if [ ! -f "package.json" ]; then
+        print_error "package.json not found"
+        return 1
+    fi
+
+    if ! grep -q '"workspaces"' package.json; then
+        print_error "Workspaces not configured in package.json"
+        return 1
+    fi
+
+    # Check workspace directories
+    local workspaces=$(node -p "require('./package.json').workspaces || []" 2>/dev/null)
+
+    for workspace in $workspaces; do
+        if [ ! -d "$workspace" ]; then
+            print_warning "Workspace directory not found: $workspace"
+        elif [ ! -f "$workspace/package.json" ]; then
+            print_warning "Workspace package.json not found: $workspace/package.json"
+        else
+            print_success "Workspace valid: $workspace"
+        fi
+    done
+
+    print_success "Workspace validation completed"
+}
+
+# Function to generate dependency tree
+generate_dep_tree() {
+    print_step "Generating dependency tree..."
+
+    if command -v npm-tree >/dev/null 2>&1; then
+        npm-tree > dependency-tree.txt
+        print_success "Dependency tree generated: dependency-tree.txt"
+    else
+        print_info "npm-tree not available, using npm ls"
+        npm ls --depth=0 > dependency-tree.txt
+        print_success "Basic dependency list generated: dependency-tree.txt"
+    fi
+}
+
+# Function to run workspace scripts
+run_workspace_scripts() {
+    local script_name="$1"
+
+    if [ -z "$script_name" ]; then
+        print_error "Script name required"
+        return 1
+    fi
+
+    print_step "Running '$script_name' in all workspaces..."
+
+    # Run script in root
+    if npm run "$script_name" >/dev/null 2>&1; then
+        print_success "Root: $script_name completed"
+    fi
+
+    # Run script in workspaces
+    for workspace in apps/* services/* packages/*; do
+        if [ -d "$workspace" ] && [ -f "$workspace/package.json" ]; then
+            cd "$workspace"
+            if npm run "$script_name" >/dev/null 2>&1; then
+                print_success "$workspace: $script_name completed"
+            fi
+            cd "$PROJECT_ROOT"
+        fi
+    done
+}
+
+# Function to show usage
+show_usage() {
     cat << EOF
-MoMo Merchant Companion App - Package Management Script
+MoMo Merchant Companion App - Package Management
 
 USAGE:
-    $0 [COMMAND]
+    $0 [COMMAND] [OPTIONS]
 
 COMMANDS:
-    info          Show workspace information
-    check         Check for dependency issues
-    clean         Clean all node_modules and caches
-    install       Install all dependencies
-    build         Build all workspaces
-    test          Run tests across all workspaces
-    lint          Lint code across all workspaces
-    versions      Check package versions
-    update        Update dependencies interactively
-    all           Run clean, install, build, test, lint
+    install              Install all dependencies
+    audit                Run security audit
+    update [type]        Update dependencies (patch/minor/major)
+    outdated             Check for outdated packages
+    clean                Clean caches and node_modules
+    analyze              Analyze bundle sizes
+    licenses             Check license compliance
+    validate             Validate workspace configuration
+    deps                 Generate dependency tree
+    run <script>         Run script in all workspaces
 
 EXAMPLES:
-    $0 info                    # Show workspace info
-    $0 clean && $0 install     # Clean and reinstall
-    $0 all                     # Full pipeline
+    $0 install                    # Install all dependencies
+    $0 audit                      # Run security audit
+    $0 update patch              # Update patch versions
+    $0 outdated                  # Check outdated packages
+    $0 clean                     # Clean caches
+    $0 analyze                   # Analyze bundle sizes
+    $0 licenses                  # Check licenses
+    $0 validate                  # Validate workspaces
+    $0 deps                      # Generate dependency tree
+    $0 run build                 # Run build in all workspaces
+
+WORKSPACE SCRIPTS:
+    The following scripts can be run across all workspaces:
+    - build: Build all workspaces
+    - test: Run tests in all workspaces
+    - lint: Lint all workspaces
+    - typecheck: Type check all workspaces
 
 EOF
 }
 
 # Main execution
 main() {
-    local command="$1"
+    cd "$PROJECT_ROOT"
+    check_project_root
 
-    check_project_directory
-
-    case "$command" in
-        "info")
-            get_workspace_info
-            ;;
-        "check")
-            check_dependencies
-            ;;
-        "clean")
-            clean_workspaces
-            ;;
+    case "${1:-help}" in
         "install")
             install_dependencies
             ;;
-        "build")
-            build_workspaces
-            ;;
-        "test")
-            run_tests
-            ;;
-        "lint")
-            lint_code
-            ;;
-        "versions")
-            check_versions
+        "audit")
+            run_security_audit
             ;;
         "update")
-            update_dependencies
+            update_dependencies "${2:-patch}"
             ;;
-        "all")
-            clean_workspaces
-            install_dependencies
-            build_workspaces
-            run_tests
-            lint_code
+        "outdated")
+            check_outdated
+            ;;
+        "clean")
+            clean_cache
+            ;;
+        "analyze")
+            analyze_bundle
+            ;;
+        "licenses")
+            check_licenses
+            ;;
+        "validate")
+            validate_workspaces
+            ;;
+        "deps")
+            generate_dep_tree
+            ;;
+        "run")
+            if [ -z "$2" ]; then
+                print_error "Script name required for 'run' command"
+                exit 1
+            fi
+            run_workspace_scripts "$2"
+            ;;
+        "help"|"-h"|"--help")
+            show_usage
             ;;
         *)
-            show_help
+            print_error "Unknown command: $1"
+            echo
+            show_usage
+            exit 1
             ;;
     esac
 }
 
-# Run main function with all arguments
+# Run main function
 main "$@"
