@@ -1,103 +1,108 @@
-# Write-Ahead Intent: AWS Account Setup and IAM Configuration
+# Write-Ahead Intent: AWS Account Setup
 
 ## 🎯 Intent
-Establish a secure, compliant AWS environment for the MoMo Merchant Companion App with proper IAM governance and cost management controls.
+Establish a secure, scalable AWS cloud infrastructure foundation for the MoMo Merchant Companion App that supports development, staging, and production environments with proper access controls and cost management.
 
 ## 📋 Rationale
-AWS infrastructure is critical for the application's backend services, database, and deployment pipeline. Proper account setup ensures security compliance, cost control, and operational reliability. This foundation must be established before any infrastructure-as-code work can proceed.
+Cloud infrastructure is critical for modern application development, providing scalability, reliability, and global reach. Proper AWS setup ensures security, cost efficiency, and operational excellence from day one, preventing technical debt and enabling rapid feature development.
 
 ## 🎯 Expected Outcome
-- ✅ AWS account provisioned with proper billing and security settings
-- ✅ IAM users and roles configured with least-privilege access
-- ✅ MFA enabled for all accounts
-- ✅ Cost monitoring and alerting configured
-- ✅ Initial VPC and security groups created
-- ✅ CI/CD integration credentials prepared
+- ✅ **AWS Account**: Production-ready account with proper billing and support
+- ✅ **IAM Foundation**: Secure user management and access controls
+- ✅ **Cost Management**: Budgets, alerts, and cost optimization
+- ✅ **Security Baseline**: MFA, password policies, and access monitoring
+- ✅ **Multi-Environment**: Separate dev, staging, and production configurations
+- ✅ **CI/CD Integration**: Automated deployment capabilities
 
 ## 🔍 Alternatives Considered
 
-### Option 1: Use Existing AWS Account
-- **Pros**: Faster setup, existing infrastructure
-- **Cons**: Security risks, compliance concerns, cost allocation issues
-- **Decision**: Rejected - Need clean, dedicated environment for compliance
+### Option 1: Single AWS Account
+- **Pros**: Simple management, unified billing
+- **Cons**: Security risks, no environment isolation
+- **Decision**: Rejected - Too risky for production workloads
 
-### Option 2: Start with Free Tier Only
-- **Pros**: Zero initial cost, gradual scaling
-- **Cons**: Limited resources, service restrictions, migration complexity
-- **Decision**: Rejected - Need full AWS ecosystem for production requirements
+### Option 2: Multiple Independent Accounts
+- **Pros**: Complete isolation, granular security
+- **Cons**: Complex management, higher costs, difficult cross-account access
+- **Decision**: Considered but AWS Organizations provides better balance
 
-### Option 3: Multi-Account Strategy from Day One
-- **Pros**: Better security isolation, cost allocation, compliance
-- **Cons**: Higher complexity, additional management overhead
-- **Decision**: Considered but deferred - Start with single account, plan for multi-account later
+### Option 3: Other Cloud Providers
+- **Pros**: Alternative ecosystems, potentially lower costs
+- **Cons**: Limited African presence, less fintech integration
+- **Decision**: AWS chosen for global infrastructure and service ecosystem
 
 ## 📝 Implementation Approach
 
 ### Phase 1: Account Provisioning
-1. Create dedicated AWS account for MoMo Merchant App
-2. Configure billing alerts and budgets ($500/month initial limit)
-3. Enable AWS Organizations for future multi-account setup
-4. Set up consolidated billing if using existing organization
+1. **AWS Account Creation**: Set up root account with proper contact information
+2. **Billing Configuration**: Enable consolidated billing and cost allocation tags
+3. **Support Plan**: Select appropriate AWS support tier
+4. **Root Account Security**: Enable MFA and secure credentials
+5. **Account Aliases**: Configure user-friendly account identifiers
 
-### Phase 2: Security Foundation
-1. Enable AWS CloudTrail for audit logging
-2. Configure AWS Config for compliance monitoring
-3. Set up AWS Security Hub for security posture
-4. Enable GuardDuty for threat detection
+### Phase 2: AWS Organizations Setup
+1. **Organization Creation**: Establish organizational structure
+2. **Organizational Units**: Create OUs for dev, staging, production
+3. **Service Control Policies**: Implement security guardrails
+4. **Member Accounts**: Create separate accounts for each environment
+5. **Cross-Account Access**: Configure IAM roles for cross-account operations
 
-### Phase 3: IAM Setup
-1. Create IAM groups (Admin, Developer, ReadOnly)
-2. Configure IAM policies with least-privilege principle
-3. Set up MFA for all IAM users
-4. Create CI/CD service roles with minimal permissions
+### Phase 3: IAM Foundation
+1. **Identity Center**: Set up AWS IAM Identity Center (formerly SSO)
+2. **User Groups**: Create groups for developers, admins, read-only users
+3. **Permission Sets**: Define least-privilege access policies
+4. **MFA Enforcement**: Require multi-factor authentication for all users
+5. **Access Keys**: Configure programmatic access with rotation policies
 
-### Phase 4: Network Foundation
-1. Create initial VPC with public/private subnets
-2. Configure security groups for different service tiers
-3. Set up VPC endpoints for AWS services
-4. Configure network ACLs and routing
+### Phase 4: Security & Compliance
+1. **CloudTrail**: Enable comprehensive audit logging
+2. **Config Rules**: Set up automated compliance monitoring
+3. **GuardDuty**: Enable threat detection and monitoring
+4. **Security Hub**: Centralized security findings and alerts
+5. **Compliance Frameworks**: Configure for relevant standards (SOC 2, etc.)
 
 ### Phase 5: Cost Management
-1. Set up Cost Allocation Tags
-2. Configure AWS Budgets with alerts
-3. Enable Cost Explorer and detailed billing
-4. Set up cost anomaly detection
+1. **Budgets**: Set up cost budgets with alerts
+2. **Cost Allocation Tags**: Implement resource tagging strategy
+3. **Savings Plans**: Configure for EC2 and Fargate usage
+4. **Cost Explorer**: Enable detailed cost analysis
+5. **Anomaly Detection**: Set up unusual spending alerts
 
 ## ⚠️ Risks & Mitigations
 
-### Risk: Cost Overruns
-- **Mitigation**: Budget alerts, cost allocation tags, regular monitoring
-- **Contingency**: Automated shutdown scripts for unused resources
-
 ### Risk: Security Misconfiguration
-- **Mitigation**: Least-privilege IAM, automated security scanning
-- **Contingency**: Regular security audits, automated remediation
+- **Mitigation**: Use AWS Config rules and automated remediation
+- **Contingency**: Regular security audits and penetration testing
 
-### Risk: Compliance Violations
-- **Mitigation**: Enable AWS Config rules, regular compliance checks
-- **Contingency**: Automated compliance reporting, audit trails
+### Risk: Cost Overruns
+- **Mitigation**: Budget alerts and resource tagging policies
+- **Contingency**: Cost optimization tools and reserved instances
+
+### Risk: Account Compromise
+- **Mitigation**: MFA, least privilege, and monitoring
+- **Contingency**: Incident response plan and backup access methods
 
 ## 📊 Success Criteria
-- [ ] AWS account active with proper billing setup
-- [ ] IAM users created with MFA enabled
-- [ ] Basic VPC and security groups configured
-- [ ] Cost monitoring and alerting active
-- [ ] CI/CD integration credentials prepared
-- [ ] Security baseline established
+- [ ] AWS account fully configured with proper security
+- [ ] IAM users and roles set up with least privilege
+- [ ] Cost monitoring and budgets active
+- [ ] Multi-environment structure established
+- [ ] CI/CD integration ready for deployments
 
 ## ⏱️ Timeline
 - **Week 1**: Account provisioning and basic setup
-- **Week 2**: IAM configuration and security setup
-- **Week 3**: Network foundation and cost management
+- **Week 2**: Organizations, IAM, and security configuration
+- **Week 3**: Cost management and monitoring setup
 - **Week 4**: Testing and documentation
 
 ## 📚 Dependencies
-- None - This is a foundational task
+- Phase 0.11: Terraform Foundation (parallel development)
+- Phase 0.12: Remote State Configuration (parallel development)
 
 ## 🔗 Related Documents
-- [AWS Security Best Practices](../Resources/R-Security-Standards.md)
-- [Infrastructure Standards](../Areas/A-Infrastructure-Management.md)
-- [Cost Management Guidelines](../Areas/A-Infrastructure-Management.md)
+- [Infrastructure Architecture](../Areas/A-Infrastructure-Architecture.md)
+- [Security Policy](../Areas/A-Security-Policy.md)
+- [Cost Management](../Areas/A-Cost-Management.md)
 
 ---
 
