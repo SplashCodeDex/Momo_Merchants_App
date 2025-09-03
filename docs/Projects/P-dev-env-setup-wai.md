@@ -1,111 +1,103 @@
 # Write-Ahead Intent: Development Environment Setup
 
 ## 🎯 Intent
-Establish a consistent, reproducible development environment for the MoMo Merchant Companion App that enables efficient development across the team while maintaining code quality and security standards.
+Establish a comprehensive, cross-platform development environment that enables seamless collaboration and consistent development experiences across all team members for the MoMo Merchant Companion App.
 
 ## 📋 Rationale
-A standardized development environment is critical for team productivity, code consistency, and preventing "works on my machine" issues. This setup must support both React Native mobile development and Node.js backend development within the monorepo structure.
+A standardized development environment is crucial for modern software development, ensuring that all team members can work efficiently without environment-specific issues. This eliminates the "works on my machine" problem and accelerates onboarding of new developers.
 
 ## 🎯 Expected Outcome
-- ✅ **Node.js Environment**: Consistent Node.js version and package management
-- ✅ **React Native Setup**: iOS and Android development environments configured
-- ✅ **Development Tools**: Linting, formatting, and testing tools ready
-- ✅ **Monorepo Workflow**: Turborepo and workspace management functional
-- ✅ **Security**: Pre-commit hooks and code quality gates active
-- ✅ **Documentation**: Setup instructions and troubleshooting guides
+- ✅ **Cross-Platform Setup**: Consistent environment on macOS, Linux, and Windows
+- ✅ **Automated Installation**: One-command setup for all development tools
+- ✅ **Container Support**: Docker-based development for complex dependencies
+- ✅ **IDE Integration**: VS Code configuration with extensions and settings
+- ✅ **Testing Environment**: Local testing capabilities for all components
+- ✅ **Documentation**: Comprehensive setup guides and troubleshooting
 
 ## 🔍 Alternatives Considered
 
-### Option 1: Individual Developer Setup
-- **Pros**: Developer choice, potentially optimized for individual preferences
-- **Cons**: Inconsistency, setup time, debugging complexity, "works on my machine" issues
-- **Decision**: Rejected - Need consistency for team collaboration
+### Option 1: Manual Setup Documentation
+- **Pros**: Simple to create, no additional tooling
+- **Cons**: Error-prone, time-consuming, inconsistent results
+- **Decision**: Rejected - Too unreliable for team productivity
 
-### Option 2: Docker-Only Development
-- **Pros**: Perfect consistency, easy onboarding, environment isolation
-- **Cons**: Performance overhead, complex debugging, limited native mobile testing
-- **Decision**: Considered but deferred - Start with local setup, add Docker later
+### Option 2: Vagrant Virtual Machines
+- **Pros**: Consistent environments, isolated from host
+- **Cons**: Resource intensive, slow startup, complex networking
+- **Decision**: Considered but Docker provides better balance
 
-### Option 3: Cloud Development Environment (GitHub Codespaces)
-- **Pros**: Zero local setup, consistent environment, easy sharing
-- **Cons**: Cost, internet dependency, limited mobile development capabilities
-- **Decision**: Considered for future - Start with local setup for better mobile dev
+### Option 3: GitHub Codespaces
+- **Pros**: Zero local setup, consistent cloud environment
+- **Cons**: Requires internet, additional cost, limited customization
+- **Decision**: Good for remote work but local development preferred
 
 ## 📝 Implementation Approach
 
-### Phase 1: Node.js and Package Management
-1. **Node Version Manager**: Install and configure nvm for consistent Node.js versions
-2. **Package Managers**: Set up npm and yarn with workspace support
-3. **Global Tools**: Install essential development tools (TypeScript, ESLint, etc.)
-4. **Monorepo Tools**: Configure Turborepo for efficient builds and caching
+### Phase 1: Core Development Tools
+1. **Node.js Setup**: Version management with nvm or volta
+2. **React Native CLI**: Android Studio, Xcode, and platform tools
+3. **Package Managers**: npm, yarn, and pnpm configuration
+4. **Git Configuration**: Hooks, aliases, and credential management
+5. **Shell Environment**: Zsh/Bash configuration with useful aliases
 
-### Phase 2: React Native Development Environment
-1. **iOS Development**:
-   - Install Xcode and iOS Simulator
-   - Configure CocoaPods for iOS dependencies
-   - Set up iOS certificates and provisioning profiles (for testing)
-2. **Android Development**:
-   - Install Android Studio and SDK
-   - Configure Android Virtual Device (AVD)
-   - Set up Android SDK environment variables
-3. **React Native CLI**: Install and configure React Native CLI tools
+### Phase 2: Development Scripts
+1. **Setup Automation**: One-command environment setup
+2. **Health Checks**: Automated environment validation
+3. **Dependency Management**: Automated package installation
+4. **Database Setup**: Local PostgreSQL and Redis
+5. **Testing Infrastructure**: Local test environment setup
 
-### Phase 3: Development Tools and Quality Gates
-1. **Code Quality**: Configure ESLint, Prettier, and TypeScript
-2. **Testing Framework**: Set up Jest and React Native Testing Library
-3. **Git Hooks**: Configure Husky for pre-commit quality checks
-4. **VS Code**: Set up recommended extensions and settings
+### Phase 3: IDE and Tooling
+1. **VS Code Configuration**: Extensions, settings, and workspace
+2. **Docker Integration**: Development containers and compose
+3. **API Testing**: Postman/Insomnia collections and environments
+4. **Database Tools**: pgAdmin, RedisInsight, and MongoDB Compass
+5. **Monitoring Tools**: Local logging and metrics setup
 
-### Phase 4: Backend Development Environment
-1. **Database Tools**: Install PostgreSQL client tools
-2. **API Testing**: Set up tools for testing REST APIs
-3. **Environment Variables**: Configure development environment files
-4. **Local Services**: Set up local development databases if needed
-
-### Phase 5: Documentation and Onboarding
-1. **Setup Guide**: Create comprehensive setup instructions
-2. **Troubleshooting**: Document common issues and solutions
-3. **Best Practices**: Establish development workflow guidelines
-4. **Team Onboarding**: Create checklist for new team members
+### Phase 4: Documentation and Support
+1. **Setup Guides**: Step-by-step instructions for each platform
+2. **Troubleshooting**: Common issues and solutions
+3. **Best Practices**: Development workflow guidelines
+4. **Team Onboarding**: New developer setup process
+5. **Environment Updates**: Keeping environments current
 
 ## ⚠️ Risks & Mitigations
 
 ### Risk: Platform-Specific Issues
-- **Mitigation**: Document platform-specific requirements and provide setup scripts
-- **Contingency**: Create platform-specific setup guides and support channels
+- **Mitigation**: Comprehensive testing on all platforms, fallback options
+- **Contingency**: Docker-based development as universal fallback
 
-### Risk: Version Conflicts
-- **Mitigation**: Pin exact versions in package.json and document version requirements
-- **Contingency**: Regular dependency updates and version conflict resolution guides
+### Risk: Tool Version Conflicts
+- **Mitigation**: Version pinning and automated updates
+- **Contingency**: Version management tools and rollback procedures
 
-### Risk: Performance Issues
-- **Mitigation**: Configure development tools for optimal performance (Turborepo caching)
-- **Contingency**: Performance monitoring and optimization guidelines
+### Risk: Security Vulnerabilities
+- **Mitigation**: Regular security audits and dependency updates
+- **Contingency**: Automated vulnerability scanning and alerts
 
 ## 📊 Success Criteria
-- [ ] Node.js environment consistently set up across team
-- [ ] React Native development possible on both iOS and Android
-- [ ] All linting and formatting tools working correctly
-- [ ] Pre-commit hooks preventing low-quality commits
-- [ ] Development workflow documented and accessible
-- [ ] New team members can set up environment independently
+- [ ] All team members can set up environment in < 30 minutes
+- [ ] Consistent development experience across platforms
+- [ ] Automated testing works locally for all components
+- [ ] New developers can be productive within 1 day
+- [ ] Environment issues resolved within 1 hour
+- [ ] Documentation kept current with tool updates
 
 ## ⏱️ Timeline
-- **Week 1**: Node.js and package management setup
-- **Week 2**: React Native development environment
-- **Week 3**: Development tools and quality gates
-- **Week 4**: Documentation and testing
+- **Week 1**: Core tools and automation scripts
+- **Week 2**: Platform-specific configurations and testing
+- **Week 3**: Documentation and team training
+- **Week 4**: Monitoring and continuous improvement
 
 ## 📚 Dependencies
-- Phase 0.2: Monorepo Configuration (completed)
-- Phase 0.3: TypeScript Configuration (completed)
-- Phase 0.4: Linting & Formatting (completed)
-- Phase 0.5: Commit Conventions (completed)
+- Phase 0.2: Monorepo Configuration (workspace structure)
+- Phase 0.3: TypeScript Configuration (language setup)
+- Phase 0.4: Linting & Formatting (code quality tools)
 
 ## 🔗 Related Documents
 - [Development Setup Guide](../Resources/R-Development-Setup.md)
-- [Contributing Guidelines](../Areas/A-Development-Workflow.md)
-- [Code Quality Standards](../Areas/A-Code-Quality.md)
+- [Package Management](../Areas/A-Package-Management.md)
+- [IDE Configuration](../Resources/R-VSCode-Configuration.md)
 
 ---
 

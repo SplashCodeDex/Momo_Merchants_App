@@ -2,431 +2,823 @@
 
 ## Overview
 
-This guide provides comprehensive instructions for setting up your development environment for the MoMo Merchant Companion App. The setup process is designed to ensure consistency across the development team and prevent "works on my machine" issues.
+This guide provides comprehensive instructions for setting up a development environment for the MoMo Merchant Companion App. The setup process is automated through scripts, but this guide explains each component and provides manual setup options.
+
+## Quick Start
+
+### Automated Setup (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/momo-merchant-app.git
+cd momo-merchant-app
+
+# Run the automated setup script
+./scripts/setup-dev-environment.sh
+
+# For quick setup (skip databases)
+./scripts/setup-dev-environment.sh --quick
+
+# Check environment health
+./scripts/setup-dev-environment.sh --check-only
+```
+
+### Manual Setup
+
+If the automated script doesn't work for your system, follow the manual setup instructions below.
+
+---
 
 ## Prerequisites
 
 ### System Requirements
 
-- **Operating System**: macOS 12+, Linux (Ubuntu 20.04+), or Windows 10/11 with WSL2
-- **RAM**: Minimum 8GB, Recommended 16GB+
-- **Storage**: 20GB+ free space
-- **Internet**: Stable broadband connection
+| Component | Version | Notes |
+|-----------|---------|-------|
+| **Node.js** | 18.17+ | LTS version recommended |
+| **npm** | 8.0+ | Comes with Node.js |
+| **Git** | 2.30+ | Version control |
+| **Docker** | 20.0+ | For local databases |
+| **Python** | 3.9+ | For some development tools |
 
-### Required Software
+### Hardware Requirements
 
-- **Git**: Version control system
-- **Node.js**: JavaScript runtime (managed via nvm)
-- **npm**: Package manager (comes with Node.js)
-- **React Native CLI**: Mobile development tools
+- **RAM**: 8GB minimum, 16GB recommended
+- **Storage**: 20GB free space
+- **CPU**: Multi-core processor
+- **Network**: Stable internet connection
 
-### Platform-Specific Requirements
+---
 
-#### macOS
-- Xcode 14+ (for iOS development)
-- Xcode Command Line Tools
-- Homebrew (package manager)
-- CocoaPods (iOS dependency manager)
+## Platform-Specific Setup
 
-#### Linux (Ubuntu/Debian)
-- Build tools: `build-essential`
-- Java 11+ (for Android development)
-- Watchman (optional, for better performance)
+### macOS Setup
 
-#### Windows
-- Windows Subsystem for Linux 2 (WSL2)
-- Ubuntu distribution (recommended)
-- Android Studio (for Android development)
-
-## Automated Setup
-
-The easiest way to set up your development environment is using the automated setup script:
-
+#### 1. Install Homebrew
 ```bash
-# Clone the repository (if not already done)
-git clone <repository-url>
-cd momo-merchants-app
-
-# Run the setup script
-chmod +x scripts/setup-dev-environment.sh
-./scripts/setup-dev-environment.sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-The script will:
-- Install Node.js via nvm
-- Set up React Native development tools
-- Install project dependencies
-- Configure development tools
-- Create environment files
-- Verify the setup
-
-## Manual Setup Instructions
-
-If you prefer to set up the environment manually or need to troubleshoot the automated setup, follow these steps:
-
-### 1. Install Node.js and npm
-
+#### 2. Install Node.js
 ```bash
-# Install nvm (Node Version Manager)
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-
-# Restart terminal or source nvm
-source ~/.bashrc
-
-# Install Node.js 18.17.0
-nvm install 18.17.0
-nvm use 18.17.0
-nvm alias default 18.17.0
-
-# Verify installation
-node --version  # Should show v18.17.0
-npm --version   # Should show 9.x.x
+brew install node@18
+echo 'export PATH="/usr/local/opt/node@18/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
-### 2. Install React Native CLI
-
-```bash
-# Install React Native CLI globally
-npm install -g @react-native-community/cli react-native-cli
-
-# Verify installation
-react-native --version
-```
-
-### 3. Platform-Specific Setup
-
-#### macOS Setup
-
+#### 3. Install React Native Dependencies
 ```bash
 # Install Xcode Command Line Tools
 xcode-select --install
 
-# Install Homebrew
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install iOS dependencies
-brew install cocoapods
-brew install watchman
-
-# Install Android Studio (optional, for Android development)
+# Install Android Studio (for Android development)
 # Download from: https://developer.android.com/studio
+
+# Install iOS Simulator dependencies
+sudo gem install cocoapods
 ```
 
-#### Linux Setup
-
+#### 4. Install Development Tools
 ```bash
-# Update system packages
-sudo apt-get update
-
-# Install Java (required for Android)
-sudo apt-get install -y openjdk-11-jdk
-
-# Install other dependencies
-sudo apt-get install -y curl unzip build-essential
-
-# Install watchman (optional)
-sudo apt-get install -y watchman
+brew install git docker docker-compose
+brew install --cask visual-studio-code
 ```
 
-#### Windows Setup
+### Linux Setup (Ubuntu/Debian)
 
+#### 1. Update System
 ```bash
-# Enable WSL2 and install Ubuntu from Microsoft Store
-# Follow: https://docs.microsoft.com/en-us/windows/wsl/install
-
-# In WSL Ubuntu terminal:
-sudo apt-get update
-sudo apt-get install -y curl unzip build-essential openjdk-11-jdk
-
-# Install Android Studio on Windows host
-# Follow: https://developer.android.com/studio
+sudo apt update && sudo apt upgrade -y
 ```
 
-### 4. Install Project Dependencies
-
+#### 2. Install Node.js
 ```bash
-# Install project dependencies
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+#### 3. Install React Native Dependencies
+```bash
+# Install Java
+sudo apt install -y openjdk-17-jdk
+
+# Install Android development tools
+sudo apt install -y android-tools-adb android-tools-fastboot
+
+# Install build tools
+sudo apt install -y build-essential
+```
+
+#### 4. Install Development Tools
+```bash
+sudo apt install -y git docker.io docker-compose
+sudo usermod -aG docker $USER
+```
+
+### Windows Setup
+
+#### 1. Install Chocolatey
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+```
+
+#### 2. Install Node.js
+```powershell
+choco install nodejs-lts
+```
+
+#### 3. Install React Native Dependencies
+```powershell
+# Install Java
+choco install openjdk17
+
+# Install Android Studio
+choco install androidstudio
+
+# Install Python (if not present)
+choco install python
+```
+
+#### 4. Install Development Tools
+```powershell
+choco install git docker-desktop vscode
+```
+
+---
+
+## Project Setup
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/your-org/momo-merchant-app.git
+cd momo-merchant-app
+```
+
+### 2. Install Dependencies
+```bash
+# Install all workspace dependencies
 npm install
 
-# Setup git hooks (if using husky)
-npm run prepare
+# Install iOS dependencies (macOS only)
+cd apps/mobile && npm run ios:install
 ```
 
-### 5. Configure Environment Variables
-
+### 3. Environment Configuration
 ```bash
 # Copy environment template
-cp .env.example .env
+cp .env.example .env.local
 
-# Edit .env with your configuration
-# Required variables:
-# - DATABASE_URL
-# - JWT_SECRET
-# - AWS_REGION
-# - REDIS_URL
+# Edit with your local configuration
+nano .env.local
 ```
 
-### 6. Setup Development Tools
-
+#### Environment Variables
 ```bash
-# Install global development tools
-npm install -g typescript eslint prettier jest ts-jest
-
-# Verify installations
-tsc --version
-eslint --version
-prettier --version
-```
-
-## VS Code Configuration
-
-### Recommended Extensions
-
-Install these extensions for the best development experience:
-
-```json
-{
-    "recommendations": [
-        "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
-        "ms-vscode.vscode-typescript-next",
-        "bradlc.vscode-tailwindcss",
-        "ms-vscode.vscode-json",
-        "christian-kohler.path-intellisense",
-        "ms-vscode-remote.remote-containers",
-        "ms-vscode.vscode-docker",
-        "msjsdiag.debugger-for-chrome",
-        "formulahendry.auto-rename-tag",
-        "bradlc.vscode-tailwindcss"
-    ]
-}
-```
-
-### Workspace Settings
-
-The setup script creates optimized VS Code settings. Key configurations:
-
-```json
-{
-    "typescript.preferences.importModuleSpecifier": "relative",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": true
-    },
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "typescript.suggest.autoImports": true,
-    "typescript.updateImportsOnFileMove.enabled": "always"
-}
-```
-
-## Development Workflow
-
-### Starting Development
-
-```bash
-# Start all development servers
-npm run dev
-
-# Or start specific services
-npm run dev:mobile    # React Native development
-npm run dev:backend   # Backend API development
-npm run dev:web       # Admin dashboard development
-```
-
-### Available Scripts
-
-```bash
-# Development
-npm run dev              # Start all development servers
-npm run build            # Build all packages
-npm run clean            # Clean build artifacts
-
-# Code Quality
-npm run lint             # Run ESLint
-npm run lint:fix         # Fix ESLint issues
-npm run format           # Format code with Prettier
-npm run typecheck        # Run TypeScript type checking
-
-# Testing
-npm run test             # Run all tests
-npm run test:watch       # Run tests in watch mode
-npm run test:coverage    # Run tests with coverage
-
 # Database
-npm run db:migrate       # Run database migrations
-npm run db:seed          # Seed database with test data
-npm run db:reset         # Reset database
+DATABASE_URL="postgresql://username:password@localhost:5432/momo_merchant_dev"
 
-# Mobile Development
-cd apps/mobile
-npm run ios              # Start iOS development
-npm run android          # Start Android development
-npm run start            # Start Metro bundler
+# Redis
+REDIS_URL="redis://localhost:6379"
+
+# JWT
+JWT_SECRET="your-development-jwt-secret-change-in-production"
+
+# AWS (for local development)
+AWS_REGION="eu-west-1"
+AWS_ACCESS_KEY_ID="your-access-key"
+AWS_SECRET_ACCESS_KEY="your-secret-key"
+
+# App Configuration
+NODE_ENV="development"
+PORT=3000
+
+# React Native
+EXPO_TOKEN="your-expo-token"
 ```
 
-## Mobile Development Setup
+### 4. Set Up Local Databases
+```bash
+# Start databases
+docker-compose -f docker-compose.dev.yml up -d
 
-### iOS Development
+# Wait for databases to be ready
+sleep 10
 
-1. **Install Xcode**: Download from Mac App Store
-2. **Install CocoaPods**: `sudo gem install cocoapods`
-3. **Setup iOS Simulator**:
-   ```bash
-   cd apps/mobile/ios
-   pod install
-   cd ..
-   npm run ios
-   ```
+# Test database connection
+npm run db:test
+```
 
-### Android Development
+### 5. Initialize Database
+```bash
+# Run database migrations
+npm run db:migrate
 
-1. **Install Android Studio**
-2. **Configure Android SDK**:
-   - Open Android Studio
-   - Go to SDK Manager
-   - Install Android 13 (API 33)
-   - Install Android SDK Build-Tools 33.0.0
-3. **Setup Environment Variables**:
-   ```bash
-   export ANDROID_HOME=$HOME/Library/Android/sdk
-   export PATH=$PATH:$ANDROID_HOME/emulator
-   export PATH=$PATH:$ANDROID_HOME/tools
-   export PATH=$PATH:$ANDROID_HOME/tools/bin
-   export PATH=$PATH:$ANDROID_HOME/platform-tools
-   ```
-4. **Create Android Virtual Device**:
-   ```bash
-   cd apps/mobile
-   npm run android
-   ```
+# Seed development data
+npm run db:seed
+```
+
+---
+
+## Development Workflows
+
+### Starting the Development Server
+
+#### Mobile App (React Native)
+```bash
+# Start Metro bundler
+npm run mobile:dev
+
+# iOS Simulator (macOS only)
+npm run mobile:ios
+
+# Android Emulator/Device
+npm run mobile:android
+
+# Web version for testing
+npm run mobile:web
+```
+
+#### Backend API
+```bash
+# Start development server
+npm run api:dev
+
+# With debugging
+npm run api:debug
+
+# API will be available at http://localhost:3000
+```
+
+#### Admin Dashboard (Next.js)
+```bash
+# Start development server
+npm run admin:dev
+
+# Dashboard will be available at http://localhost:3001
+```
+
+### Running Tests
+
+#### Unit Tests
+```bash
+# Run all unit tests
+npm run test
+
+# Run specific workspace tests
+npm run test --workspace=apps/mobile
+npm run test --workspace=services/app-api
+
+# Watch mode
+npm run test:watch
+```
+
+#### Integration Tests
+```bash
+# Run integration tests
+npm run test:integration
+
+# With coverage
+npm run test:integration:coverage
+```
+
+#### End-to-End Tests
+```bash
+# Start test databases
+npm run test:e2e:setup
+
+# Run E2E tests
+npm run test:e2e
+
+# Clean up
+npm run test:e2e:cleanup
+```
+
+### Code Quality
+
+#### Linting
+```bash
+# Lint all workspaces
+npm run lint
+
+# Fix auto-fixable issues
+npm run lint:fix
+
+# Lint specific workspace
+npm run lint --workspace=apps/mobile
+```
+
+#### Type Checking
+```bash
+# Type check all workspaces
+npm run typecheck
+
+# Type check specific workspace
+npm run typecheck --workspace=services/app-api
+```
+
+#### Formatting
+```bash
+# Format all code
+npm run format
+
+# Check formatting
+npm run format:check
+```
+
+---
+
+## IDE Configuration
+
+### Visual Studio Code
+
+#### Recommended Extensions
+```json
+{
+  "recommendations": [
+    "ms-vscode.vscode-typescript-next",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "ms-vscode.vscode-json",
+    "bradlc.vscode-tailwindcss",
+    "ms-vscode-remote.remote-containers",
+    "ms-vscode.vscode-docker",
+    "ms-vscode.vscode-jest",
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense",
+    "ms-vscode.vscode-git-graph"
+  ]
+}
+```
+
+#### Workspace Settings
+```json
+{
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "emmet.includeLanguages": {
+    "typescript": "html",
+    "typescriptreact": "html"
+  },
+  "files.associations": {
+    "*.css": "tailwindcss"
+  }
+}
+```
+
+### IntelliJ IDEA / WebStorm
+
+#### Recommended Plugins
+- TypeScript
+- Prettier
+- ESLint
+- Tailwind CSS
+- React Native Console
+
+---
+
+## Database Management
+
+### Local Development Database
+
+#### PostgreSQL
+```bash
+# Connect to database
+psql postgresql://postgres:password@localhost:5432/momo_merchant_dev
+
+# View tables
+\d
+
+# View data
+SELECT * FROM users LIMIT 5;
+```
+
+#### Redis
+```bash
+# Connect to Redis
+redis-cli
+
+# View keys
+KEYS *
+
+# View key value
+GET mykey
+```
+
+### Database Tools
+
+#### pgAdmin (Database GUI)
+```bash
+# Install pgAdmin
+# macOS: brew install --cask pgadmin4
+# Linux: sudo apt install pgadmin4
+# Windows: Download from pgadmin.org
+
+# Connect to local database
+# Host: localhost
+# Port: 5432
+# Database: momo_merchant_dev
+# Username: postgres
+# Password: password
+```
+
+#### RedisInsight (Redis GUI)
+```bash
+# Download from redis.com/redis-enterprise/redis-insight
+
+# Connect to local Redis
+# Host: localhost
+# Port: 6379
+```
+
+---
+
+## API Testing
+
+### Postman Collections
+
+#### Import Collection
+```bash
+# Collections are available in docs/api/
+# Import momo-merchant-api.postman_collection.json
+```
+
+#### Environment Setup
+```json
+{
+  "baseUrl": "http://localhost:3000",
+  "databaseUrl": "postgresql://postgres:password@localhost:5432/momo_merchant_dev",
+  "jwtSecret": "your-development-jwt-secret"
+}
+```
+
+### cURL Examples
+
+#### Health Check
+```bash
+curl -X GET http://localhost:3000/health
+```
+
+#### User Registration
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phoneNumber": "+1234567890",
+    "password": "password123",
+    "businessName": "Test Business"
+  }'
+```
+
+#### Transaction Creation
+```bash
+curl -X POST http://localhost:3000/api/transactions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "type": "deposit",
+    "amount": 100.00,
+    "customerNumber": "+0987654321",
+    "customerName": "John Doe"
+  }'
+```
+
+---
+
+## Debugging
+
+### React Native Debugging
+
+#### Metro Bundler
+```bash
+# Clear Metro cache
+npm run mobile:clean
+
+# Start with verbose logging
+npm run mobile:dev -- --verbose
+```
+
+#### Device Debugging
+```bash
+# iOS Device Logs
+xcrun simctl spawn booted log stream --level=debug --predicate 'process == "YourApp"'
+
+# Android Device Logs
+adb logcat | grep ReactNative
+```
+
+### Backend Debugging
+
+#### Node.js Inspector
+```bash
+# Start with debugging enabled
+npm run api:debug
+
+# Connect debugger at chrome://inspect
+```
+
+#### Database Query Logging
+```bash
+# Enable query logging in .env.local
+DATABASE_DEBUG=true
+```
+
+### Network Debugging
+
+#### API Request Logging
+```bash
+# Enable request logging
+DEBUG=api:*
+npm run api:dev
+```
+
+#### Charles Proxy / mitmproxy
+```bash
+# Install Charles Proxy
+# Configure mobile device proxy settings
+# Inspect API requests and responses
+```
+
+---
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### 1. Node.js Version Issues
+#### 1. Port Already in Use
 ```bash
-# Check current version
-node --version
+# Find process using port
+lsof -i :3000
 
-# Switch to correct version
-nvm use 18.17.0
+# Kill process
+kill -9 <PID>
 
-# Set as default
-nvm alias default 18.17.0
+# Or use different port
+PORT=3001 npm run dev
 ```
 
-#### 2. React Native Metro Bundler Issues
+#### 2. Database Connection Issues
+```bash
+# Check if database is running
+docker ps | grep postgres
+
+# Restart database
+docker-compose -f docker-compose.dev.yml restart postgres
+
+# Reset database
+docker-compose -f docker-compose.dev.yml down -v
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+#### 3. Node Modules Issues
+```bash
+# Clear node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# Clear npm cache
+npm cache clean --force
+```
+
+#### 4. React Native Metro Issues
 ```bash
 # Clear Metro cache
-npm run start -- --reset-cache
+npm run mobile:clean
 
-# Clear node_modules and reinstall
-rm -rf node_modules
-npm install
-```
-
-#### 3. iOS Build Issues
-```bash
-# Clean iOS build
-cd apps/mobile/ios
-rm -rf build
-pod install
-cd ..
-npm run ios
-```
-
-#### 4. Android Build Issues
-```bash
-# Clean Android build
-cd apps/mobile/android
-./gradlew clean
-cd ..
-npm run android
+# Reset Metro
+npm run mobile:reset
 ```
 
 #### 5. Permission Issues
 ```bash
 # Fix npm permissions
 sudo chown -R $(whoami) ~/.npm
-sudo chown -R $(whoami) /usr/local/lib/node_modules
+
+# Fix Docker permissions (Linux)
+sudo usermod -aG docker $USER
+newgrp docker
 ```
 
 ### Getting Help
 
-1. **Check Documentation**: Review this guide and project README
-2. **Team Chat**: Ask questions in the development channel
-3. **GitHub Issues**: Search existing issues or create new ones
-4. **Code Reviews**: Learn from existing code and patterns
+#### Documentation
+- **API Documentation**: `docs/api/README.md`
+- **Architecture Guide**: `docs/ARCHITECTURE_GUIDE.md`
+- **Contributing Guide**: `CONTRIBUTING.md`
 
-## Environment Validation
+#### Support Channels
+- **GitHub Issues**: For bugs and feature requests
+- **Slack/Teams**: For team communication
+- **Documentation Wiki**: For detailed guides
 
-Run these commands to verify your setup:
-
+#### Debug Commands
 ```bash
-# Check Node.js and npm
-node --version
-npm --version
+# System information
+npm run info
 
-# Check React Native
-react-native --version
+# Environment health check
+./scripts/setup-dev-environment.sh --check-only
 
-# Check project setup
-npm run typecheck
-npm run lint
-npm run test
-
-# Check mobile setup
-cd apps/mobile
-npm run start
-```
-
-## Next Steps
-
-Once your development environment is set up:
-
-1. **Read the Project Overview**: Check `README.md` for project structure
-2. **Review Contributing Guidelines**: See `CONTRIBUTING.md` for development workflow
-3. **Explore the Codebase**: Familiarize yourself with the monorepo structure
-4. **Start with a Small Task**: Pick an issue from the backlog to get started
-5. **Join Team Standups**: Participate in daily development discussions
-
-## Maintenance
-
-### Keeping Your Environment Updated
-
-```bash
-# Update Node.js
-nvm install node  # Latest LTS
-nvm use node
-nvm alias default node
-
-# Update global packages
-npm update -g
-
-# Update project dependencies
-npm update
-
-# Update React Native
-npm install react-native@latest
-cd apps/mobile/ios && pod update
-```
-
-### Regular Cleanup
-
-```bash
-# Clear npm cache
-npm cache clean --force
-
-# Clear React Native cache
-cd apps/mobile
-npm run start -- --reset-cache
-
-# Clear iOS build artifacts
-cd apps/mobile/ios
-rm -rf build
+# Dependency analysis
+npm run deps:check
 ```
 
 ---
 
-*This guide is maintained by the development team. Please update it when you discover new setup requirements or troubleshooting solutions.*
+## Performance Optimization
+
+### Development Performance
+
+#### 1. Fast Refresh
+```javascript
+// Enable Fast Refresh in React Native
+// Already configured in metro.config.js
+```
+
+#### 2. Bundle Splitting
+```javascript
+// Code splitting for better performance
+const AdminApp = lazy(() => import('./AdminApp'));
+```
+
+#### 3. Development Database
+```bash
+# Use lightweight database for development
+# PostgreSQL with minimal configuration
+```
+
+### Build Optimization
+
+#### 1. Build Caching
+```bash
+# Turborepo caching is already configured
+npm run build  # Uses cache automatically
+```
+
+#### 2. Development vs Production
+```bash
+# Development build (fast)
+npm run dev
+
+# Production build (optimized)
+npm run build
+```
+
+---
+
+## Security Considerations
+
+### Development Security
+
+#### 1. Environment Variables
+```bash
+# Never commit secrets
+# Use .env.local for local development
+# Use secure secret management for production
+```
+
+#### 2. Database Security
+```bash
+# Use strong passwords
+# Limit database access
+# Use database migrations for schema changes
+```
+
+#### 3. API Security
+```bash
+# Use HTTPS in production
+# Implement proper authentication
+# Validate all inputs
+# Use rate limiting
+```
+
+### Code Security
+
+#### 1. Dependency Scanning
+```bash
+# Check for vulnerabilities
+npm audit
+
+# Fix vulnerabilities
+npm audit fix
+```
+
+#### 2. Code Analysis
+```bash
+# Run security linting
+npm run security:check
+
+# Check for secrets in code
+npm run secrets:check
+```
+
+---
+
+## Contributing
+
+### Development Workflow
+
+1. **Create Feature Branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Make Changes**
+   ```bash
+   # Follow conventional commits
+   # Write tests for new features
+   # Update documentation
+   ```
+
+3. **Run Quality Checks**
+   ```bash
+   npm run lint
+   npm run typecheck
+   npm run test
+   ```
+
+4. **Commit Changes**
+   ```bash
+   git add .
+   git commit -m "feat: add new feature"
+   ```
+
+5. **Create Pull Request**
+   ```bash
+   git push origin feature/your-feature-name
+   # Create PR with description
+   ```
+
+### Code Standards
+
+#### Commit Messages
+```bash
+# Good commit messages
+feat: add user authentication
+fix: resolve database connection issue
+docs: update API documentation
+refactor: simplify transaction logic
+
+# Bad commit messages
+fixed bug
+updated code
+changes
+```
+
+#### Code Style
+```javascript
+// Use consistent formatting
+// Follow ESLint rules
+// Use TypeScript for type safety
+// Write comprehensive tests
+```
+
+---
+
+## Next Steps
+
+### After Setup
+
+1. **Explore the Codebase**
+   ```bash
+   # Read architecture documentation
+   cat docs/ARCHITECTURE_GUIDE.md
+
+   # Understand project structure
+   tree -I node_modules
+
+   # Review API documentation
+   cat docs/api/README.md
+   ```
+
+2. **Run Example Features**
+   ```bash
+   # Test basic functionality
+   npm run test:e2e -- --grep "user registration"
+
+   # Explore admin dashboard
+   npm run admin:dev
+   ```
+
+3. **Learn the Tech Stack**
+   - React Native for mobile development
+   - Node.js/Express for backend API
+   - PostgreSQL for data storage
+   - Redis for caching
+   - TypeScript for type safety
+
+### Getting Started with Development
+
+1. **Pick a Task**: Check the ToDo.md for available tasks
+2. **Understand Requirements**: Read the relevant documentation
+3. **Write Code**: Follow the established patterns
+4. **Write Tests**: Ensure test coverage for new features
+5. **Test Locally**: Verify functionality works as expected
+6. **Create PR**: Submit your changes for review
+
+---
+
+*This guide is continuously updated. Check for the latest version in the repository.*

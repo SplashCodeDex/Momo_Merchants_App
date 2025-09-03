@@ -7,8 +7,9 @@ set -e
 
 # Configuration
 PROJECT_NAME="momo-merchant-app"
-NODE_VERSION="18.17.0"
-REACT_NATIVE_VERSION="0.72.6"
+NODE_VERSION="23.6.1"
+PYTHON_VERSION="3.11"
+JAVA_VERSION="17"
 
 # Colors for output
 RED='\033[0;31m'
@@ -46,379 +47,339 @@ print_info() {
     echo -e "${PURPLE}[INFO]${NC} $1"
 }
 
-# Function to check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
-
-# Function to check OS
-get_os() {
-    case "$(uname -s)" in
-        Darwin)
-            echo "macos"
-            ;;
-        Linux)
-            echo "linux"
-            ;;
-        CYGWIN*|MINGW32*|MSYS*|MINGW*)
-            echo "windows"
-            ;;
-        *)
-            echo "unknown"
-            ;;
-    esac
-}
-
-OS=$(get_os)
-print_info "Detected OS: $OS"
-
-# Check prerequisites
-check_prerequisites() {
-    print_header "Checking Prerequisites"
-
-    local missing_deps=()
-
-    # Check Git
-    if ! command_exists git; then
-        missing_deps+=("Git")
+# Function to detect OS
+detect_os() {
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        OS="linux"
+        if command -v lsb_release >/dev/null 2>&1; then
+            DISTRO=$(lsb_release -si | tr '[:upper:]' '[:lower:]')
+        else
+            DISTRO="unknown"
+        fi
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        OS="macos"
+        DISTRO="macos"
+    elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
+        OS="windows"
+        DISTRO="windows"
     else
-        print_success "Git is installed: $(git --version)"
+        OS="unknown"
+        DISTRO="unknown"
     fi
 
-    # Check curl or wget
-    if ! command_exists curl && ! command_exists wget; then
-        missing_deps+=("curl or wget")
+    print_info "Detected OS: $OS ($DISTRO)"
+}
+
+# Function to check command availability
+check_command() {
+    if command -v "$1" >/dev/null 2>&1; then
+        print_success "$1 is available"
+        return 0
     else
-        print_success "HTTP client available"
+        print_warning "$1 is not available"
+        return 1
+    fi
+}
+
+# Function to install Homebrew (macOS/Linux)
+install_homebrew() {
+    print_step "Installing Homebrew..."
+
+    if [[ "$OS" == "macos" ]]; then
+        if ! check_command brew; then
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            print_success "Homebrew installed"
+        fi
+    elif [[ "$OS" == "linux" ]]; then
+        if ! check_command brew; then
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            print_success "Homebrew installed"
+        fi
+    fi
+}
+
+# Function to install Node.js
+install_nodejs() {
+    print_step "Installing Node.js $NODE_VERSION..."
+
+    if check_command node; then
+        CURRENT_VERSION=$(node --version)
+        print_info "Node.js $CURRENT_VERSION is already installed"
+        return
     fi
 
-    if [ ${#missing_deps[@]} -ne 0 ]; then
-        print_error "Missing prerequisites: ${missing_deps[*]}"
-        print_info "Please install missing dependencies and run this script again."
+    if [[ "$OS" == "macos" ]]; then
+        if check_command brew; then
+            brew install node@$NODE_VERSION
+            print_success "Node.js installed via Homebrew"
+        else
+            print_error "Homebrew not available for Node.js installation"
+            exit 1
+        fi
+    elif [[ "$OS" == "linux" ]]; then
+        # Install via NodeSource repository
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+        print_success "Node.js installed via NodeSource"
+    elif [[ "$OS" == "windows" ]]; then
+        print_info "Please download Node.js from https://nodejs.org/"
+        print_info "Run the installer and then re-run this script"
         exit 1
     fi
 }
 
-# Setup Node.js and npm
-setup_nodejs() {
-    print_header "Setting up Node.js and npm"
+# Function to install React Native CLI and dependencies
+install_react_native_deps() {
+    print_step "Installing React Native development dependencies..."
 
-    # Check if nvm is installed
-    if ! command_exists nvm; then
-        print_step "Installing nvm (Node Version Manager)..."
-
-        if command_exists curl; then
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-        elif command_exists wget; then
-            wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+    if [[ "$OS" == "macos" ]]; then
+        # Install Xcode command line tools
+        if ! xcode-select -p >/dev/null 2>&1; then
+            print_info "Installing Xcode Command Line Tools..."
+            xcode-select --install
+            print_success "Xcode Command Line Tools installed"
         fi
 
-        # Source nvm
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+        # Install Android Studio and SDK
+        if ! check_command adb; then
+            print_info "Please install Android Studio from https://developer.android.com/studio"
+            print_info "Make sure to install Android SDK and set ANDROID_HOME"
+        fi
 
-        print_success "nvm installed successfully"
-    else
-        print_success "nvm is already installed"
-        # Source nvm
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        # Install iOS Simulator
+        if ! check_command xcrun; then
+            print_warning "Xcode not found. iOS development will not be available"
+        fi
+
+    elif [[ "$OS" == "linux" ]]; then
+        # Install Android development tools
+        sudo apt-get update
+        sudo apt-get install -y android-tools-adb android-tools-fastboot
+
+        # Install Java
+        sudo apt-get install -y openjdk-$JAVA_VERSION-jdk
+
+        print_info "For Android development, you may need to:"
+        print_info "1. Install Android Studio"
+        print_info "2. Set ANDROID_HOME environment variable"
+        print_info "3. Add Android SDK tools to PATH"
+
+    elif [[ "$OS" == "windows" ]]; then
+        print_info "For React Native development on Windows:"
+        print_info "1. Install Android Studio"
+        print_info "2. Install JDK $JAVA_VERSION"
+        print_info "3. Set up Android environment variables"
+        print_info "4. Install Intel HAXM or use Android Emulator"
     fi
-
-    # Install and use specified Node.js version
-    print_step "Installing Node.js $NODE_VERSION..."
-    nvm install "$NODE_VERSION"
-    nvm use "$NODE_VERSION"
-    nvm alias default "$NODE_VERSION"
-
-    print_success "Node.js $NODE_VERSION installed and set as default"
-
-    # Verify installation
-    print_info "Node.js version: $(node --version)"
-    print_info "npm version: $(npm --version)"
 }
 
-# Setup React Native development environment
-setup_react_native() {
-    print_header "Setting up React Native Development Environment"
+# Function to install development tools
+install_dev_tools() {
+    print_step "Installing development tools..."
 
-    case $OS in
-        macos)
-            setup_react_native_macos
-            ;;
-        linux)
-            setup_react_native_linux
-            ;;
-        windows)
-            setup_react_native_windows
-            ;;
-        *)
-            print_error "Unsupported OS for React Native development: $OS"
-            print_info "React Native development requires macOS, Linux, or Windows with WSL2"
-            ;;
-    esac
-}
-
-setup_react_native_macos() {
-    print_step "Setting up React Native for macOS..."
-
-    # Check if Xcode is installed
-    if ! command_exists xcodebuild; then
-        print_error "Xcode is not installed"
-        print_info "Please install Xcode from the Mac App Store and run 'xcode-select --install'"
-        print_info "Then run this script again."
-        exit 1
-    else
-        print_success "Xcode is installed"
+    # Install Git (if not present)
+    if ! check_command git; then
+        if [[ "$OS" == "macos" ]]; then
+            brew install git
+        elif [[ "$OS" == "linux" ]]; then
+            sudo apt-get install -y git
+        fi
+        print_success "Git installed"
     fi
 
-    # Install Xcode command line tools
-    if ! xcode-select -p >/dev/null 2>&1; then
-        print_step "Installing Xcode command line tools..."
-        xcode-select --install
-        print_success "Xcode command line tools installed"
-    else
-        print_success "Xcode command line tools are already installed"
+    # Install Docker
+    if ! check_command docker; then
+        if [[ "$OS" == "macos" ]]; then
+            brew install --cask docker
+        elif [[ "$OS" == "linux" ]]; then
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo usermod -aG docker $USER
+        fi
+        print_success "Docker installed"
     fi
 
-    # Install Homebrew if not present
-    if ! command_exists brew; then
-        print_step "Installing Homebrew..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        print_success "Homebrew installed"
-    else
-        print_success "Homebrew is already installed"
+    # Install VS Code extensions
+    if check_command code; then
+        print_step "Installing VS Code extensions..."
+
+        # Install essential extensions
+        code --install-extension ms-vscode.vscode-typescript-next
+        code --install-extension esbenp.prettier-vscode
+        code --install-extension dbaeumer.vscode-eslint
+        code --install-extension ms-vscode.vscode-json
+        code --install-extension bradlc.vscode-tailwindcss
+        code --install-extension ms-vscode-remote.remote-containers
+        code --install-extension ms-vscode.vscode-docker
+
+        print_success "VS Code extensions installed"
     fi
-
-    # Install React Native dependencies
-    print_step "Installing React Native dependencies..."
-
-    # Install Node.js dependencies globally
-    npm install -g react-native-cli @react-native-community/cli
-
-    # Install iOS dependencies
-    brew install cocoapods
-    brew install watchman
-
-    # Install Android dependencies (optional for iOS development)
-    print_info "For Android development on macOS, you can install Android Studio separately"
-
-    print_success "React Native dependencies installed for macOS"
 }
 
-setup_react_native_linux() {
-    print_step "Setting up React Native for Linux..."
-
-    # Install system dependencies
-    print_step "Installing system dependencies..."
-
-    # Update package list
-    sudo apt-get update
-
-    # Install Java (required for Android)
-    sudo apt-get install -y openjdk-11-jdk
-
-    # Install other dependencies
-    sudo apt-get install -y curl unzip
-
-    # Install Node.js global packages
-    npm install -g react-native-cli @react-native-community/cli
-
-    # Install watchman (optional but recommended)
-    if command_exists apt-get; then
-        sudo apt-get install -y watchman
-    fi
-
-    print_success "React Native dependencies installed for Linux"
-}
-
-setup_react_native_windows() {
-    print_step "Setting up React Native for Windows..."
-
-    print_info "For Windows development, it's recommended to use WSL2 with Ubuntu"
-    print_info "Please ensure you have:"
-    print_info "1. Windows Subsystem for Linux (WSL2) installed"
-    print_info "2. Ubuntu distribution installed"
-    print_info "3. Android Studio installed on Windows"
-    print_info "4. Node.js installed in WSL2 environment"
-
-    # Install Node.js global packages in WSL
-    npm install -g react-native-cli @react-native-community/cli
-
-    print_success "Basic React Native setup completed for Windows/WSL2"
-}
-
-# Setup project dependencies
-setup_project_dependencies() {
-    print_header "Setting up Project Dependencies"
+# Function to set up project
+setup_project() {
+    print_step "Setting up project..."
 
     # Check if we're in the project directory
     if [ ! -f "package.json" ]; then
-        print_error "package.json not found. Please run this script from the project root directory."
+        print_error "Please run this script from the project root directory"
         exit 1
     fi
 
+    # Install dependencies
     print_step "Installing project dependencies..."
     npm install
+    print_success "Dependencies installed"
 
-    print_success "Project dependencies installed"
-
-    # Setup git hooks
+    # Set up Git hooks
     if [ -d ".husky" ]; then
-        print_step "Setting up git hooks..."
+        print_step "Setting up Git hooks..."
         npm run prepare
         print_success "Git hooks configured"
     fi
-}
 
-# Setup development tools
-setup_dev_tools() {
-    print_header "Setting up Development Tools"
-
-    # Install global development tools
-    print_step "Installing global development tools..."
-
-    npm install -g typescript
-    npm install -g eslint
-    npm install -g prettier
-    npm install -g jest
-    npm install -g ts-jest
-
-    print_success "Global development tools installed"
-
-    # Setup VS Code settings (if VS Code is available)
-    if command_exists code; then
-        print_step "Setting up VS Code workspace settings..."
-
-        # Create .vscode directory if it doesn't exist
-        mkdir -p .vscode
-
-        # Create settings.json
-        cat > .vscode/settings.json << EOF
-{
-    "typescript.preferences.importModuleSpecifier": "relative",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": true
-    },
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "typescript.suggest.autoImports": true,
-    "typescript.updateImportsOnFileMove.enabled": "always",
-    "emmet.includeLanguages": {
-        "typescript": "html",
-        "typescriptreact": "html"
-    },
-    "files.associations": {
-        "*.css": "tailwindcss"
-    }
-}
-EOF
-
-        # Create extensions.json
-        cat > .vscode/extensions.json << EOF
-{
-    "recommendations": [
-        "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
-        "ms-vscode.vscode-typescript-next",
-        "bradlc.vscode-tailwindcss",
-        "ms-vscode.vscode-json",
-        "christian-kohler.path-intellisense",
-        "ms-vscode-remote.remote-containers",
-        "ms-vscode.vscode-docker"
-    ]
-}
-EOF
-
-        print_success "VS Code workspace settings configured"
-    fi
-}
-
-# Create environment files
-setup_environment_files() {
-    print_header "Setting up Environment Files"
-
-    # Create .env.example
-    if [ ! -f ".env.example" ]; then
-        print_step "Creating .env.example file..."
-
-        cat > .env.example << EOF
-# MoMo Merchant Companion App - Environment Variables
-# Copy this file to .env and fill in your values
+    # Create environment files
+    if [ ! -f ".env.local" ]; then
+        print_step "Creating environment template..."
+        cat > .env.local << EOF
+# Development Environment Variables
+# Copy this file and customize for your local environment
 
 # Database
 DATABASE_URL="postgresql://username:password@localhost:5432/momo_merchant_dev"
 
-# Authentication
-JWT_SECRET="your-super-secret-jwt-key-here"
-JWT_REFRESH_SECRET="your-refresh-token-secret-here"
-
-# AWS Configuration
-AWS_REGION="eu-west-1"
-AWS_ACCESS_KEY_ID="your-aws-access-key"
-AWS_SECRET_ACCESS_KEY="your-aws-secret-key"
-
 # Redis
 REDIS_URL="redis://localhost:6379"
 
-# Email (for notifications)
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT="587"
-SMTP_USER="your-email@gmail.com"
-SMTP_PASS="your-app-password"
+# JWT
+JWT_SECRET="your-development-jwt-secret-change-in-production"
 
-# Mobile App
-APP_ENV="development"
-API_BASE_URL="http://localhost:3000/api"
+# AWS (for local development)
+AWS_REGION="eu-west-1"
+AWS_ACCESS_KEY_ID="your-access-key"
+AWS_SECRET_ACCESS_KEY="your-secret-key"
 
-# Feature Flags
-ENABLE_SMS_PARSING="true"
-ENABLE_OFFLINE_MODE="true"
-ENABLE_BIOMETRICS="true"
+# App Configuration
+NODE_ENV="development"
+PORT=3000
+
+# React Native
+EXPO_TOKEN="your-expo-token"
 EOF
-
-        print_success ".env.example file created"
-    fi
-
-    # Remind about .env file
-    if [ ! -f ".env" ]; then
-        print_warning ".env file not found"
-        print_info "Copy .env.example to .env and configure your environment variables"
-        print_info "cp .env.example .env"
+        print_success "Environment template created (.env.local)"
+        print_warning "Please customize .env.local with your local configuration"
     fi
 }
 
-# Verify setup
-verify_setup() {
-    print_header "Verifying Development Environment Setup"
+# Function to set up local databases
+setup_databases() {
+    print_step "Setting up local databases..."
+
+    # Check if Docker is running
+    if ! docker info >/dev/null 2>&1; then
+        print_warning "Docker is not running. Skipping database setup."
+        print_info "Start Docker and run this script again for database setup"
+        return
+    fi
+
+    # Create docker-compose.yml for local development
+    if [ ! -f "docker-compose.dev.yml" ]; then
+        cat > docker-compose.dev.yml << EOF
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: momo-merchant-postgres
+    environment:
+      POSTGRES_DB: momo_merchant_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: momo-merchant-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+EOF
+        print_success "Docker Compose file created (docker-compose.dev.yml)"
+    fi
+
+    # Start databases
+    print_step "Starting local databases..."
+    docker-compose -f docker-compose.dev.yml up -d
+    print_success "Databases started"
+
+    # Wait for PostgreSQL to be ready
+    print_step "Waiting for PostgreSQL to be ready..."
+    sleep 10
+
+    # Test database connection
+    if command -v psql >/dev/null 2>&1; then
+        print_step "Testing database connection..."
+        PGPASSWORD=password psql -h localhost -U postgres -d momo_merchant_dev -c "SELECT version();" >/dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            print_success "Database connection successful"
+        else
+            print_warning "Database connection test failed"
+        fi
+    fi
+}
+
+# Function to run health checks
+run_health_checks() {
+    print_header "Running Health Checks"
 
     local issues_found=0
 
     # Check Node.js
-    if command_exists node; then
-        print_success "Node.js: $(node --version)"
+    if check_command node; then
+        NODE_VER=$(node --version)
+        print_success "Node.js: $NODE_VER"
     else
         print_error "Node.js not found"
         ((issues_found++))
     fi
 
     # Check npm
-    if command_exists npm; then
-        print_success "npm: $(npm --version)"
+    if check_command npm; then
+        NPM_VER=$(npm --version)
+        print_success "npm: $NPM_VER"
     else
         print_error "npm not found"
         ((issues_found++))
     fi
 
-    # Check React Native CLI
-    if command_exists react-native; then
-        print_success "React Native CLI: $(react-native --version | head -1)"
+    # Check Git
+    if check_command git; then
+        GIT_VER=$(git --version)
+        print_success "Git: $GIT_VER"
     else
-        print_warning "React Native CLI not found (install with: npm install -g @react-native-community/cli)"
+        print_error "Git not found"
+        ((issues_found++))
     fi
 
-    # Check project dependencies
+    # Check Docker
+    if check_command docker && docker info >/dev/null 2>&1; then
+        DOCKER_VER=$(docker --version)
+        print_success "Docker: $DOCKER_VER"
+    else
+        print_warning "Docker not available or not running"
+    fi
+
+    # Check project setup
     if [ -d "node_modules" ]; then
         print_success "Project dependencies installed"
     else
@@ -426,90 +387,174 @@ verify_setup() {
         ((issues_found++))
     fi
 
-    # Check TypeScript
-    if command_exists tsc; then
-        print_success "TypeScript: $(tsc --version)"
+    # Check databases
+    if docker ps | grep -q momo-merchant-postgres; then
+        print_success "PostgreSQL container running"
     else
-        print_warning "TypeScript not found globally (available via npm scripts)"
+        print_warning "PostgreSQL container not running"
+    fi
+
+    if docker ps | grep -q momo-merchant-redis; then
+        print_success "Redis container running"
+    else
+        print_warning "Redis container not running"
     fi
 
     if [ $issues_found -gt 0 ]; then
-        print_error "Found $issues_found issue(s) that need to be resolved"
+        print_warning "Found $issues_found issues. Please resolve them before proceeding."
         return 1
     else
-        print_success "Development environment setup completed successfully!"
+        print_success "All health checks passed!"
         return 0
     fi
 }
 
-# Print next steps
-print_next_steps() {
-    print_header "Next Steps"
+# Function to show usage
+show_usage() {
+    cat << EOF
+MoMo Merchant Companion App - Development Environment Setup
 
-    echo -e "${CYAN}1. Configure Environment Variables${NC}"
-    echo "   cp .env.example .env"
-    echo "   # Edit .env with your configuration"
-    echo ""
+USAGE:
+    $0 [OPTIONS]
 
-    echo -e "${CYAN}2. Start Development${NC}"
-    echo "   npm run dev        # Start development servers"
-    echo "   npm run build      # Build for production"
-    echo "   npm run test       # Run tests"
-    echo ""
+DESCRIPTION:
+    This script sets up a complete development environment for the
+    MoMo Merchant Companion App, including Node.js, React Native,
+    databases, and development tools.
 
-    echo -e "${CYAN}3. React Native Development${NC}"
-    echo "   cd apps/mobile"
-    echo "   npm run ios        # iOS development"
-    echo "   npm run android    # Android development"
-    echo ""
+OPTIONS:
+    --help, -h          Show this help message
+    --quick             Skip optional components (databases, tools)
+    --no-databases      Skip database setup
+    --no-tools          Skip development tools installation
+    --check-only        Only run health checks, don't install anything
 
-    echo -e "${CYAN}4. Database Setup${NC}"
-    echo "   npm run db:migrate # Run database migrations"
-    echo "   npm run db:seed    # Seed database with test data"
-    echo ""
+EXAMPLES:
+    $0                  # Complete setup
+    $0 --quick         # Quick setup without databases
+    $0 --check-only    # Only check current environment
 
-    echo -e "${CYAN}5. Useful Commands${NC}"
-    echo "   npm run lint       # Run ESLint"
-    echo "   npm run format     # Format code with Prettier"
-    echo "   npm run typecheck  # Run TypeScript type checking"
-    echo ""
+COMPONENTS INSTALLED:
+    - Node.js $NODE_VERSION
+    - React Native development tools
+    - Git and development tools
+    - Docker and local databases
+    - VS Code extensions
+    - Project dependencies
 
-    print_info "For detailed documentation, see:"
-    print_info "- docs/Resources/R-Development-Setup.md"
-    print_info "- CONTRIBUTING.md"
-    print_info "- README.md"
+REQUIREMENTS:
+    - macOS, Linux, or Windows
+    - Administrator/sudo access for installations
+    - Internet connection for downloads
+
+EOF
 }
 
 # Main execution
 main() {
-    print_header "MoMo Merchant Companion App - Development Environment Setup"
+    # Parse arguments
+    QUICK_SETUP=false
+    SKIP_DATABASES=false
+    SKIP_TOOLS=false
+    CHECK_ONLY=false
 
-    print_info "This script will set up your development environment for the MoMo Merchant Companion App."
-    print_info "Make sure you have administrator/sudo privileges when running this script."
-    echo ""
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --help|-h)
+                show_usage
+                exit 0
+                ;;
+            --quick)
+                QUICK_SETUP=true
+                shift
+                ;;
+            --no-databases)
+                SKIP_DATABASES=true
+                shift
+                ;;
+            --no-tools)
+                SKIP_TOOLS=true
+                shift
+                ;;
+            --check-only)
+                CHECK_ONLY=true
+                shift
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                show_usage
+                exit 1
+                ;;
+        esac
+    done
 
-    # Confirm before proceeding
-    read -p "Do you want to continue with the setup? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        print_info "Setup cancelled by user."
-        exit 0
+    print_header "MoMo Merchant Companion App"
+    print_info "Development Environment Setup"
+    print_info "Project: $PROJECT_NAME"
+
+    detect_os
+
+    if [ "$CHECK_ONLY" = true ]; then
+        run_health_checks
+        exit $?
     fi
 
-    # Run setup steps
-    check_prerequisites
-    setup_nodejs
-    setup_react_native
-    setup_project_dependencies
-    setup_dev_tools
-    setup_environment_files
+    # Pre-flight checks
+    print_header "Pre-flight Checks"
 
-    # Verify setup
-    if verify_setup; then
-        print_next_steps
-        print_success "🎉 Development environment setup completed successfully!"
+    # Check if running as root (not recommended)
+    if [[ $EUID -eq 0 ]]; then
+        print_warning "Running as root is not recommended"
+        read -p "Continue anyway? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+
+    # Install package managers
+    if [[ "$OS" == "macos" ]] || [[ "$OS" == "linux" ]]; then
+        install_homebrew
+    fi
+
+    # Install core components
+    install_nodejs
+
+    if [ "$QUICK_SETUP" = false ]; then
+        install_react_native_deps
+
+        if [ "$SKIP_TOOLS" = false ]; then
+            install_dev_tools
+        fi
+
+        if [ "$SKIP_DATABASES" = false ]; then
+            setup_databases
+        fi
+    fi
+
+    # Set up project
+    setup_project
+
+    # Final health check
+    if run_health_checks; then
+        print_header "Setup Complete! 🎉"
+
+        echo ""
+        print_info "Next Steps:"
+        echo "1. Customize .env.local with your configuration"
+        echo "2. Start databases: docker-compose -f docker-compose.dev.yml up -d"
+        echo "3. Run the project: npm run dev"
+        echo "4. Open in browser: http://localhost:3000"
+        echo ""
+        print_info "For React Native development:"
+        echo "- iOS: npm run ios (macOS only)"
+        echo "- Android: npm run android"
+        echo ""
+        print_info "Documentation: docs/Resources/R-Development-Setup.md"
+        echo ""
+        print_success "Happy coding! 🚀"
     else
-        print_error "Setup completed with issues. Please resolve the issues above and try again."
+        print_error "Setup completed with issues. Please resolve them and try again."
         exit 1
     fi
 }
