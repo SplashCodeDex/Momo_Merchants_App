@@ -1,0 +1,85 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'services/app-api/**'
+      - 'packages/**'
+      - 'infra/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'services/app-api/**'
+      - 'packages/**'
+      - 'infra/**'
+
+jobs:
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: momo_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run backend tests
+        run: npm run test --workspace=services/app-api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/momo_test
+          REDIS_URL: redis://localhost:6379
+
+      - name: Build backend
+        run: npm run build --workspace=services/app-api
+
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.5.0'
+
+      - name: Terraform Format
+        run: terraform fmt -check -recursive infra/terraform
+
+      - name: Terraform Validate
+        run: |
+          cd infra/terraform
+          terraform init -backend=false
+          terraform validate

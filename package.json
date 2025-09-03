@@ -1,0 +1,61 @@
+{
+  "name": "momo-merchant-app",
+  "version": "0.1.0",
+  "description": "MoMo Merchant Companion App - Digital business management platform for mobile money agents",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^17.6.5",
+    "@commitlint/config-conventional": "^17.6.5",
+    "@react-native/eslint-config": "^0.72.2",
+    "@typescript-eslint/eslint-plugin": "^6.2.1",
+    "@typescript-eslint/parser": "^6.2.1",
+    "eslint": "^8.45.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.3",
+    "prettier": "^3.0.0",
+    "turbo": "^1.10.0",
+    "typescript": "^5.1.6"
+  },
+  "packageManager": "npm@9.6.7",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/momo-merchant-app.git"
+  },
+  "keywords": [
+    "mobile-money",
+    "fintech",
+    "react-native",
+    "offline-first",
+    "monorepo"
+  ],
+  "author": "MoMo Merchant Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/your-org/momo-merchant-app/issues"
+  },
+  "homepage": "https://github.com/your-org/momo-merchant-app#readme"
+}

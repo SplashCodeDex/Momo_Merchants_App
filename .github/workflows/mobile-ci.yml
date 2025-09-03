@@ -1,0 +1,126 @@
+name: Mobile CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile-lint-test:
+    name: Mobile Lint & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run mobile linting
+        run: npm run lint --workspace=apps/mobile
+
+      - name: Run mobile type checking
+        run: npm run typecheck --workspace=apps/mobile
+
+      - name: Run mobile tests
+        run: npm run test --workspace=apps/mobile
+
+  mobile-build-android:
+    name: Mobile Build (Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [mobile-lint-test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build Android APK
+        run: |
+          cd apps/mobile
+          npm run build:android
+        env:
+          ORG_GRADLE_PROJECT_NEW_ARCHITECTURE_ENABLED: true
+
+  mobile-build-ios:
+    name: Mobile Build (iOS)
+    runs-on: macos-latest
+    timeout-minutes: 30
+    needs: [mobile-lint-test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v3
+        with:
+          path: apps/mobile/ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('apps/mobile/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install CocoaPods
+        run: |
+          cd apps/mobile/ios
+          pod install
+
+      - name: Build iOS
+        run: |
+          cd apps/mobile
+          npm run build:ios
+        env:
+          RCT_NEW_ARCH_ENABLED: 1
