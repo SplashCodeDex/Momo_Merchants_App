@@ -1,26 +1,33 @@
 #!/bin/bash
 
-# Bootstrap Remote State for MoMo Merchant Companion App
-# This script creates the S3 bucket and DynamoDB table needed for Terraform remote state
+# Bootstrap Terraform Remote State
+# This script creates the S3 bucket and DynamoDB table for Terraform remote state
 
 set -e
 
 # Configuration
 PROJECT_NAME="momo-merchant"
-ENVIRONMENT="${1:-dev}"
-AWS_REGION="${2:-eu-west-1}"
-AWS_PROFILE="${3:-default}"
+ENVIRONMENT=${1:-"dev"}
+REGION="eu-west-1"
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Function to print colored output
-print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+print_header() {
+    echo -e "\n${BLUE}================================${NC}"
+    echo -e "${BLUE}$1${NC}"
+    echo -e "${BLUE}================================${NC}\n"
+}
+
+print_step() {
+    echo -e "${CYAN}[STEP]${NC} $1"
 }
 
 print_success() {
@@ -35,216 +42,308 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if AWS CLI is installed
-if ! command -v aws &> /dev/null; then
-    print_error "AWS CLI is not installed. Please install it first."
-    exit 1
-fi
+print_info() {
+    echo -e "${PURPLE}[INFO]${NC} $1"
+}
 
-# Check if AWS credentials are configured
-if ! aws sts get-caller-identity --profile "$AWS_PROFILE" &> /dev/null; then
-    print_error "AWS credentials are not configured for profile '$AWS_PROFILE'."
-    print_info "Please run 'aws configure --profile $AWS_PROFILE' to set up your credentials."
-    exit 1
-fi
+# Function to check AWS CLI configuration
+check_aws_cli() {
+    print_step "Checking AWS CLI configuration..."
 
-print_info "Starting remote state bootstrap for environment: $ENVIRONMENT"
-print_info "AWS Region: $AWS_REGION"
-print_info "AWS Profile: $AWS_PROFILE"
-
-# Set AWS CLI profile
-export AWS_PROFILE="$AWS_PROFILE"
-export AWS_DEFAULT_REGION="$AWS_REGION"
-
-# Bucket and table names
-BUCKET_NAME="${PROJECT_NAME}-terraform-state-${ENVIRONMENT}"
-TABLE_NAME="${PROJECT_NAME}-terraform-locks-${ENVIRONMENT}"
-
-# Check if bucket already exists
-if aws s3 ls "s3://$BUCKET_NAME" 2>&1 | grep -q 'NoSuchBucket'; then
-    print_info "Creating S3 bucket: $BUCKET_NAME"
-
-    # Create bucket (region-specific for eu-west-1)
-    if [ "$AWS_REGION" = "eu-west-1" ]; then
-        aws s3 mb "s3://$BUCKET_NAME"
-    else
-        aws s3 mb "s3://$BUCKET_NAME" --region "$AWS_REGION"
+    if ! command -v aws >/dev/null 2>&1; then
+        print_error "AWS CLI is not installed. Please install it first."
+        print_info "Installation: https://aws.amazon.com/cli/"
+        exit 1
     fi
 
-    print_success "S3 bucket created: $BUCKET_NAME"
-else
-    print_warning "S3 bucket already exists: $BUCKET_NAME"
-fi
+    if ! aws sts get-caller-identity >/dev/null 2>&1; then
+        print_error "AWS CLI is not configured. Please run 'aws configure' first."
+        exit 1
+    fi
 
-# Enable versioning on the bucket
-print_info "Enabling versioning on S3 bucket..."
-aws s3api put-bucket-versioning \
-    --bucket "$BUCKET_NAME" \
-    --versioning-configuration Status=Enabled
+    ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    print_success "AWS CLI configured for account: $ACCOUNT_ID"
+}
 
-print_success "Versioning enabled on S3 bucket"
+# Function to create S3 bucket for Terraform state
+create_s3_bucket() {
+    local bucket_name="$PROJECT_NAME-$ENVIRONMENT-terraform-state"
 
-# Enable server-side encryption
-print_info "Enabling server-side encryption on S3 bucket..."
-aws s3api put-bucket-encryption \
-    --bucket "$BUCKET_NAME" \
-    --server-side-encryption-configuration '{
-        "Rules": [
-            {
+    print_step "Creating S3 bucket for Terraform state: $bucket_name"
+
+    # Check if bucket already exists
+    if aws s3 ls "s3://$bucket_name" 2>/dev/null; then
+        print_warning "S3 bucket $bucket_name already exists"
+        return 0
+    fi
+
+    # Create bucket
+    if aws s3 mb "s3://$bucket_name" --region $REGION; then
+        print_success "S3 bucket created: $bucket_name"
+    else
+        print_error "Failed to create S3 bucket"
+        return 1
+    fi
+
+    # Enable versioning
+    print_step "Enabling versioning on S3 bucket..."
+    aws s3api put-bucket-versioning \
+        --bucket $bucket_name \
+        --versioning-configuration Status=Enabled
+    print_success "Versioning enabled"
+
+    # Enable encryption
+    print_step "Enabling server-side encryption..."
+    aws s3api put-bucket-encryption \
+        --bucket $bucket_name \
+        --server-side-encryption-configuration '{
+            "Rules": [{
                 "ApplyServerSideEncryptionByDefault": {
                     "SSEAlgorithm": "AES256"
+                }
+            }]
+        }'
+    print_success "Encryption enabled"
+
+    # Block public access
+    print_step "Blocking public access..."
+    aws s3api put-public-access-block \
+        --bucket $bucket_name \
+        --public-access-block-configuration '{
+            "BlockPublicAcls": true,
+            "IgnorePublicAcls": true,
+            "BlockPublicPolicy": true,
+            "RestrictPublicBuckets": true
+        }'
+    print_success "Public access blocked"
+
+    # Add lifecycle configuration for cost optimization
+    print_step "Configuring lifecycle policy..."
+    aws s3api put-bucket-lifecycle-configuration \
+        --bucket $bucket_name \
+        --lifecycle-configuration '{
+            "Rules": [{
+                "ID": "Delete old versions",
+                "Status": "Enabled",
+                "NoncurrentVersionExpiration": {
+                    "NoncurrentDays": 30
                 },
-                "BucketKeyEnabled": true
-            }
-        ]
-    }'
+                "AbortIncompleteMultipartUpload": {
+                    "DaysAfterInitiation": 7
+                }
+            }]
+        }'
+    print_success "Lifecycle policy configured"
+}
 
-print_success "Server-side encryption enabled on S3 bucket"
+# Function to create DynamoDB table for state locking
+create_dynamodb_table() {
+    local table_name="$PROJECT_NAME-$ENVIRONMENT-terraform-locks"
 
-# Block public access
-print_info "Blocking public access on S3 bucket..."
-aws s3api put-public-access-block \
-    --bucket "$BUCKET_NAME" \
-    --public-access-block-configuration '{
-        "BlockPublicAcls": true,
-        "IgnorePublicAcls": true,
-        "BlockPublicPolicy": true,
-        "RestrictPublicBuckets": true
-    }'
+    print_step "Creating DynamoDB table for state locking: $table_name"
 
-print_success "Public access blocked on S3 bucket"
+    # Check if table already exists
+    if aws dynamodb describe-table --table-name $table_name >/dev/null 2>&1; then
+        print_warning "DynamoDB table $table_name already exists"
+        return 0
+    fi
 
-# Check if DynamoDB table already exists
-if aws dynamodb describe-table --table-name "$TABLE_NAME" 2>&1 | grep -q 'ResourceNotFoundException'; then
-    print_info "Creating DynamoDB table: $TABLE_NAME"
-
-    aws dynamodb create-table \
-        --table-name "$TABLE_NAME" \
-        --attribute-definitions '[
-            {
-                "AttributeName": "LockID",
-                "AttributeType": "S"
-            }
-        ]' \
-        --key-schema '[
-            {
-                "AttributeName": "LockID",
-                "KeyType": "HASH"
-            }
-        ]' \
+    # Create table
+    if aws dynamodb create-table \
+        --table-name $table_name \
+        --attribute-definitions AttributeName=LockID,AttributeType=S \
+        --key-schema AttributeName=LockID,KeyType=HASH \
         --billing-mode PAY_PER_REQUEST \
-        --tags "Key=Name,Value=$TABLE_NAME" \
-              "Key=Purpose,Value=Terraform State Locking" \
-              "Key=Project,Value=$PROJECT_NAME" \
-              "Key=Environment,Value=$ENVIRONMENT"
+        --tags "Key=Name,Value=$table_name" \
+               "Key=Environment,Value=$ENVIRONMENT" \
+               "Key=Project,Value=$PROJECT_NAME" \
+               "Key=ManagedBy,Value=Terraform"; then
+        print_success "DynamoDB table created: $table_name"
+    else
+        print_error "Failed to create DynamoDB table"
+        return 1
+    fi
 
-    print_success "DynamoDB table created: $TABLE_NAME"
-else
-    print_warning "DynamoDB table already exists: $TABLE_NAME"
-fi
+    # Wait for table to be active
+    print_step "Waiting for table to become active..."
+    aws dynamodb wait table-exists --table-name $table_name
+    print_success "Table is now active"
+}
 
-# Wait for table to be active
-print_info "Waiting for DynamoDB table to be active..."
-aws dynamodb wait table-exists --table-name "$TABLE_NAME"
-print_success "DynamoDB table is active"
+# Function to create backend configuration file
+create_backend_config() {
+    local config_file="environments/$ENVIRONMENT/backend.tfvars"
 
-# Create terraform.tfvars file for the environment
-print_info "Creating terraform.tfvars file..."
-cat > "environments/${ENVIRONMENT}/terraform.tfvars" << EOF
-# Environment-specific variables for $ENVIRONMENT
-environment = "$ENVIRONMENT"
-aws_region = "$AWS_REGION"
+    print_step "Creating backend configuration file: $config_file"
 
-# VPC Configuration
-vpc_cidr_block = "10.0.0.0/16"
-public_subnets = [
-  "10.0.1.0/24",
-  "10.0.2.0/24",
-  "10.0.3.0/24"
-]
-private_subnets = [
-  "10.0.10.0/24",
-  "10.0.11.0/24",
-  "10.0.12.0/24"
-]
+    cat > $config_file << EOF
+# Terraform Backend Configuration for $ENVIRONMENT Environment
+# This file is generated by bootstrap-remote-state.sh
 
-# Database Configuration
-db_instance_class = "db.t3.micro"
-db_allocated_storage = 20
+bucket         = "$PROJECT_NAME-$ENVIRONMENT-terraform-state"
+key            = "terraform.tfstate"
+region         = "$REGION"
+dynamodb_table = "$PROJECT_NAME-$ENVIRONMENT-terraform-locks"
+encrypt        = true
 
-# Redis Configuration
-redis_node_type = "cache.t3.micro"
-
-# Lambda Configuration
-lambda_memory_size = 256
-lambda_timeout = 30
-
-# Cost Management
-monthly_budget_limit = 500
-
-# Feature Flags
-enable_cloudtrail = true
-enable_config = true
-enable_security_hub = true
-enable_guardduty = true
-enable_backup = true
-
-# GitHub Integration (update with your repository)
-github_repository = "your-org/momo-merchants-app"
+# Additional configuration
+profile        = ""
+role_arn       = ""
+external_id    = ""
+session_name   = "terraform-$ENVIRONMENT"
 EOF
 
-print_success "Created terraform.tfvars file for $ENVIRONMENT environment"
+    print_success "Backend configuration created: $config_file"
+}
 
-# Create .gitignore for sensitive files
-print_info "Creating .gitignore for sensitive files..."
-cat > ".gitignore" << EOF
-# Terraform
-.terraform/
-terraform.tfstate*
-*.tfvars
+# Function to test backend configuration
+test_backend_config() {
+    print_step "Testing backend configuration..."
 
-# AWS Credentials
-.aws/
+    local config_file="environments/$ENVIRONMENT/backend.tfvars"
 
-# Environment files
-.env
-.env.local
-.env.*.local
+    if [ ! -f "$config_file" ]; then
+        print_error "Backend configuration file not found: $config_file"
+        return 1
+    fi
 
-# Logs
-*.log
-logs/
+    # Test S3 bucket access
+    if aws s3 ls "s3://$PROJECT_NAME-$ENVIRONMENT-terraform-state" >/dev/null 2>&1; then
+        print_success "S3 bucket access confirmed"
+    else
+        print_error "Cannot access S3 bucket"
+        return 1
+    fi
 
-# IDE
-.vscode/
-.idea/
+    # Test DynamoDB table access
+    if aws dynamodb describe-table --table-name "$PROJECT_NAME-$ENVIRONMENT-terraform-locks" >/dev/null 2>&1; then
+        print_success "DynamoDB table access confirmed"
+    else
+        print_error "Cannot access DynamoDB table"
+        return 1
+    fi
 
-# OS
-.DS_Store
-Thumbs.db
+    print_success "Backend configuration test passed"
+}
 
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Function to create Terraform workspace
+create_terraform_workspace() {
+    print_step "Setting up Terraform workspace..."
 
-# Build outputs
-dist/
-build/
-*.tsbuildinfo
+    # Initialize Terraform (if not already done)
+    if [ ! -d ".terraform" ]; then
+        terraform init -backend=false
+    fi
+
+    # Create workspace if it doesn't exist
+    if ! terraform workspace list | grep -q "^[* ] $ENVIRONMENT$"; then
+        terraform workspace new $ENVIRONMENT
+        print_success "Terraform workspace created: $ENVIRONMENT"
+    else
+        terraform workspace select $ENVIRONMENT
+        print_success "Terraform workspace selected: $ENVIRONMENT"
+    fi
+}
+
+# Function to show usage information
+show_usage() {
+    cat << EOF
+Bootstrap Terraform Remote State
+
+USAGE:
+    $0 [ENVIRONMENT]
+
+DESCRIPTION:
+    This script creates the necessary AWS resources for Terraform remote state
+    management, including S3 bucket for state storage and DynamoDB table for
+    state locking.
+
+ARGUMENTS:
+    ENVIRONMENT    Environment name (dev, staging, prod) [default: dev]
+
+EXAMPLES:
+    $0                    # Bootstrap dev environment
+    $0 staging           # Bootstrap staging environment
+    $0 prod              # Bootstrap production environment
+
+RESOURCES CREATED:
+    - S3 Bucket: momo-merchant-{env}-terraform-state
+    - DynamoDB Table: momo-merchant-{env}-terraform-locks
+    - Backend Config: environments/{env}/backend.tfvars
+
+REQUIREMENTS:
+    - AWS CLI configured with appropriate permissions
+    - S3FullAccess and DynamoDBFullAccess policies
+    - jq installed for JSON processing
+
 EOF
+}
 
-print_success "Created .gitignore file"
+# Function to show summary
+show_summary() {
+    print_header "Bootstrap Complete!"
 
-print_success "Remote state bootstrap completed successfully!"
-print_info ""
-print_info "Next steps:"
-print_info "1. Review and update the terraform.tfvars file in environments/$ENVIRONMENT/"
-print_info "2. Initialize Terraform: terraform init -backend-config=environments/$ENVIRONMENT/backend.tfvars"
-print_info "3. Plan the infrastructure: terraform plan -var-file=environments/$ENVIRONMENT/terraform.tfvars"
-print_info "4. Apply the infrastructure: terraform apply -var-file=environments/$ENVIRONMENT/terraform.tfvars"
-print_info ""
-print_info "Remote state resources created:"
-print_info "- S3 Bucket: $BUCKET_NAME"
-print_info "- DynamoDB Table: $TABLE_NAME"
+    echo "Environment: $ENVIRONMENT"
+    echo "Region: $REGION"
+    echo ""
+    echo "Resources Created:"
+    echo "  S3 Bucket: $PROJECT_NAME-$ENVIRONMENT-terraform-state"
+    echo "  DynamoDB Table: $PROJECT_NAME-$ENVIRONMENT-terraform-locks"
+    echo "  Backend Config: environments/$ENVIRONMENT/backend.tfvars"
+    echo ""
+    echo "Next Steps:"
+    echo "1. Review the generated backend.tfvars file"
+    echo "2. Initialize Terraform with remote backend:"
+    echo "   cd environments/$ENVIRONMENT"
+    echo "   terraform init -backend-config=backend.tfvars"
+    echo "3. Plan and apply your infrastructure:"
+    echo "   terraform plan"
+    echo "   terraform apply"
+    echo ""
+    print_info "Terraform remote state is now ready for use!"
+}
+
+# Main execution
+main() {
+    # Parse arguments
+    case "$1" in
+        --help|-h)
+            show_usage
+            exit 0
+            ;;
+        dev|staging|prod)
+            ENVIRONMENT="$1"
+            ;;
+        "")
+            ENVIRONMENT="dev"
+            ;;
+        *)
+            print_error "Invalid environment: $1"
+            print_info "Valid environments: dev, staging, prod"
+            exit 1
+            ;;
+    esac
+
+    print_header "Bootstrap Terraform Remote State"
+    print_info "Environment: $ENVIRONMENT"
+    print_info "Region: $REGION"
+
+    # Validate environment directory exists
+    if [ ! -d "environments/$ENVIRONMENT" ]; then
+        print_error "Environment directory not found: environments/$ENVIRONMENT"
+        print_info "Please create the directory first or choose a different environment"
+        exit 1
+    fi
+
+    # Run bootstrap steps
+    check_aws_cli
+    create_s3_bucket
+    create_dynamodb_table
+    create_backend_config
+    test_backend_config
+    create_terraform_workspace
+    show_summary
+}
+
+# Run main function
+main "$@"
